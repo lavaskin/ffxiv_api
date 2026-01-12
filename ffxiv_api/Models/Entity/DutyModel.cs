@@ -4,7 +4,7 @@ using ffxiv_api.Models.Enums;
 
 namespace ffxiv_api.Models.Entity;
 
-public class DutyModel
+public class DutyModel : BaseModel
 {	
 	/// <summary>
 	/// Primary Key
@@ -57,19 +57,19 @@ public class DutyModel
 
 	#endregion
 
-	public bool Validate()
+	public override string? Validate()
 	{
 		// Basic validation logic
 		if (string.IsNullOrWhiteSpace(Name))
 		{
-			return false;
+			return "Name cannot be empty.";
 		}
 
 		if (LevelRequirement < 1 || LevelRequirement > 100)
 		{
-			return false;
+			return "LevelRequirement must be between 1 and 100.";
 		}
 
-		return true;
+		return null;
 	}
 }

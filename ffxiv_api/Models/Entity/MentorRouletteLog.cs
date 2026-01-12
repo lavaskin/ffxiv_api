@@ -1,9 +1,10 @@
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
+using ffxiv_api.Models;
 using ffxiv_api.Models.Entity;
 using ffxiv_api.Models.Enums;
 
-public class MentorRouletteLog
+public class MentorRouletteLog : BaseModel
 {
 	// Navigation Properties
 	public DutyModel? DutyModel { get; set; } = null;
@@ -43,4 +44,19 @@ public class MentorRouletteLog
 	}
 
 	#endregion
+	
+	public override string? Validate()
+	{
+		if (DutyId <= 0)
+		{
+			return "Must have an associated duty";
+		}
+		
+		if (PlayedJobId <= 0)
+		{
+			return "Must have a valid played job";
+		}
+
+		return null;
+	}
 }
