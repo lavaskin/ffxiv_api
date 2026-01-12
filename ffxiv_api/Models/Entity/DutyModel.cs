@@ -6,6 +6,10 @@ namespace ffxiv_api.Models.Entity;
 
 public class DutyModel
 {	
+	
+	/// <summary>
+	/// Primary Key
+	/// </summary>
 	[Key]
 	public int DutyId { get; set; }
 

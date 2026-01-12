@@ -2,6 +2,7 @@ namespace ffxiv_api.Models.Enums;
 
 public enum ExpansionEnum
 {
+	BaseGame = 0,
 	ARealmReborn = 1,
 	Heavensward = 2,
 	Stormblood = 3,
@@ -16,12 +17,14 @@ public static class ExpansionEnumExtensions
 	{
 		return expansion switch
 		{
-			ExpansionEnum.ARealmReborn => "A Realm Reborn",
-			ExpansionEnum.Heavensward => "Heavensward",
-			ExpansionEnum.Stormblood => "Stormblood",
-			ExpansionEnum.Shadowbringers => "Shadowbringers",
-			ExpansionEnum.Endwalker => "Endwalker",
-			ExpansionEnum.Dawntrail => "Dawntrail",
+			
+			ExpansionEnum.BaseGame       => "1.0 Base Game",
+			ExpansionEnum.ARealmReborn   => "2.0: A Realm Reborn",
+			ExpansionEnum.Heavensward    => "3.0: Heavensward",
+			ExpansionEnum.Stormblood     => "4.0: Stormblood",
+			ExpansionEnum.Shadowbringers => "5.0: Shadowbringers",
+			ExpansionEnum.Endwalker      => "6.0: Endwalker",
+			ExpansionEnum.Dawntrail      => "7.0: Dawntrail",
 			_ => expansion.ToString()
 		};
 	}
