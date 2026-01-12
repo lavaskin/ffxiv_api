@@ -6,7 +6,6 @@ namespace ffxiv_api.Models.Entity;
 
 public class DutyModel
 {	
-	
 	/// <summary>
 	/// Primary Key
 	/// </summary>
@@ -57,4 +56,20 @@ public class DutyModel
 	}
 
 	#endregion
+
+	public bool Validate()
+	{
+		// Basic validation logic
+		if (string.IsNullOrWhiteSpace(Name))
+		{
+			return false;
+		}
+
+		if (LevelRequirement < 1 || LevelRequirement > 100)
+		{
+			return false;
+		}
+
+		return true;
+	}
 }

@@ -1,7 +1,7 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Data.SqlClient;
 
-namespace ffxiv_api.controllers;
+namespace ffxiv_api.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
