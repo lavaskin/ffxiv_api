@@ -10,13 +10,13 @@ public class DutyModel : BaseModel
 	/// Primary Key
 	/// </summary>
 	[Key]
-	public int DutyId { get; set; }
+	public long DutyId { get; set; }
 
 	public string Name { get; set; } = string.Empty;
 
-	public int? DutyTypeId { get; set; }
+	public long? DutyTypeId { get; set; }
 
-	public int? ExpansionId { get; set; }
+	public long? ExpansionId { get; set; }
 	
 	public int LevelRequirement { get; set; }
 
@@ -65,9 +65,19 @@ public class DutyModel : BaseModel
 			return "Name cannot be empty.";
 		}
 
+		if (DutyTypeId == null)
+		{
+			return "The duty type must be specified.";
+		}
+
+		if (ExpansionId == null)
+		{
+			return "An expansion must be specified.";
+		}
+
 		if (LevelRequirement < 1 || LevelRequirement > 100)
 		{
-			return "LevelRequirement must be between 1 and 100.";
+			return "The level requirement must be between 1 and 100.";
 		}
 
 		return null;

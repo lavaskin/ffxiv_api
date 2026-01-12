@@ -13,14 +13,14 @@ public class MentorRouletteLog : BaseModel
 	/// Primary Key
 	/// </summary>
 	[Key]
-	public int MentorRouletteLogId { get; set; }
+	public long MentorRouletteLogId { get; set; }
 
 	[ForeignKey("DutyModel")]
-	public int DutyId { get; set; }
+	public long DutyId { get; set; }
 	
 	public int SortOrder { get; set; }
 
-	public int PlayedJobId { get; set; }
+	public long? PlayedJobId { get; set; }
 
 	public string Notes { get; set; } = string.Empty;
 
@@ -31,8 +31,8 @@ public class MentorRouletteLog : BaseModel
 	[NotMapped]
 	public JobEnum? PlayedJob
 	{
-		get => (JobEnum)PlayedJobId;
-		set => PlayedJobId = value.HasValue ? (int)value.Value : 0;
+		get => PlayedJobId.HasValue ? (JobEnum?)PlayedJobId.Value : null;
+		set => PlayedJobId = value.HasValue ? (long?)value.Value : null;
 	}
 
 	[NotMapped]
@@ -52,7 +52,7 @@ public class MentorRouletteLog : BaseModel
 			return "Must have an associated duty";
 		}
 		
-		if (PlayedJobId <= 0)
+		if (!PlayedJobId.HasValue || PlayedJobId <= 0)
 		{
 			return "Must have a valid played job";
 		}
