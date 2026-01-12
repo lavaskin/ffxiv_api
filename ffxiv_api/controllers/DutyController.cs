@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Mvc;
 using ffxiv_api.Data;
 using ffxiv_api.Models.Entity;
+using Microsoft.EntityFrameworkCore;
 
 namespace ffxiv_api.Controllers;
 
@@ -18,14 +19,40 @@ public class DutyController : ControllerBase
 	[HttpGet]
 	public async Task<IActionResult> GetDuties()
 	{
-		throw new NotImplementedException();
+		try
+		{
+			var duties = await _context.Duties.ToListAsync();
+			foreach (var duty in duties)
+			{
+				duty.SetNotMapped();
+			}
+
+			return Ok(duties);
+		}
+		catch (Exception ex)
+		{
+			return StatusCode(500, new { Error = "An error occurred while retrieving duties.", Details = ex.Message });
+		}
 	}
 
     [HttpGet("{id}")]
 	public async Task<IActionResult> GetDuty(long id)
 	{
-		// Implementation to retrieve Duty by id
-		throw new NotImplementedException();
+		try
+		{
+			var duty = await _context.Duties.FindAsync(id);
+			if (duty == null)
+			{
+				return NotFound(new { Error = "Duty not found." });
+			}
+
+			duty.SetNotMapped();
+			return Ok(duty);
+		}
+		catch (Exception ex)
+		{
+			return StatusCode(500, new { Error = "An error occurred while retrieving the duty.", Details = ex.Message });
+		}
 	}
 	
 	[HttpPost]
@@ -60,7 +87,22 @@ public class DutyController : ControllerBase
 	[HttpDelete("{id}")]
 	public async Task<IActionResult> DeleteDuty(long id)
 	{
-		// Implementation to delete a Duty by id
-		throw new NotImplementedException();
+		try
+		{
+			var duty = await _context.Duties.FindAsync(id);
+			if (duty == null)
+			{
+				return NotFound(new { Error = "Duty not found." });
+			}
+
+			_context.Duties.Remove(duty);
+			await _context.SaveChangesAsync();
+
+			return NoContent();
+		}
+		catch (Exception ex)
+		{
+			return StatusCode(500, new { Error = "An error occurred while deleting the duty.", Details = ex.Message });
+		}
 	}
 }
