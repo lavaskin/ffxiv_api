@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.Data.SqlClient;
+using ffxiv_api.Data;
+using ffxiv_api.Models.Entity;
 
 namespace ffxiv_api.Controllers;
 
@@ -7,11 +8,11 @@ namespace ffxiv_api.Controllers;
 [Route("api/[controller]")]
 public class MentorRouletteController : ControllerBase
 {
-    private readonly string _connectionString;
+    private readonly AppDbContext _context;
 
-    public MentorRouletteController(string connectionString)
+    public MentorRouletteController(AppDbContext context)
     {
-        _connectionString = connectionString;
+        _context = context;
     }
 
 	/// <summary>
@@ -25,21 +26,37 @@ public class MentorRouletteController : ControllerBase
 	}
 
     [HttpGet("{id}")]
-	public async Task<IActionResult> GetMentorRouletteLog(int id)
+	public async Task<IActionResult> GetMentorRouletteLog(long id)
 	{
 		// Implementation to retrieve MentorRouletteLog by id
 		throw new NotImplementedException();
 	}
 	
 	[HttpPost]
-	public async Task<IActionResult> CreateNewLog(MentorRouletteLog log)
+	public async Task<IActionResult> CreateNewLog(MentorRouletteLog model)
 	{
-		// Implementation to create a new MentorRouletteLog
-		throw new NotImplementedException();
+		string? validationError = model.Validate();
+		if (validationError != null)
+		{
+			return BadRequest(new { Error = validationError });
+		}
+
+		model.MentorRouletteLogId = 0; // Ensure the ID is zero for new entries
+		model.DatePlayed = DateTime.UtcNow;
+
+		// Add the new log to the database
+		_context.MentorRouletteLogs.Add(model);
+		await _context.SaveChangesAsync();
+
+		// Set NotMapped properties
+		model.SetNotMapped();
+
+		// Return the created log with a 201 status
+		return CreatedAtAction(nameof(GetMentorRouletteLog), new { id = model.MentorRouletteLogId }, model);
 	}
 
 	[HttpDelete("{id}")]
-	public async Task<IActionResult> DeleteLog(int id)
+	public async Task<IActionResult> DeleteLog(long id)
 	{
 		// Implementation to delete a MentorRouletteLog by id
 		throw new NotImplementedException();
