@@ -6,7 +6,7 @@ using ffxiv_api.Models.Enums;
 public class MentorRouletteLog
 {
 	// Navigation Properties
-	public DutyModel? DutyModel { get; set; }	
+	public DutyModel? DutyModel { get; set; } = null;
 	
 	/// <summary>
 	/// Primary Key
