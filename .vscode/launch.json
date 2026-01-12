@@ -1,0 +1,21 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "ffxiv_api (dev)",
+      "type": "coreclr",
+      "request": "launch",
+      "preLaunchTask": "restore-and-build",
+      "program": "${workspaceFolder}/ffxiv_api/bin/Debug/net8.0/ffxiv_api.dll",
+      "args": [],
+      "cwd": "${workspaceFolder}/ffxiv_api",
+      "stopAtEntry": false,
+      "env": {
+        "ASPNETCORE_ENVIRONMENT": "Development"
+      },
+      "sourceFileMap": {
+        "/Views": "${workspaceFolder}/Views"
+      }
+    }
+  ]
+}
