@@ -18,7 +18,7 @@ public class DutyModel : BaseModel
 
 	public long? ExpansionId { get; set; }
 	
-	public int LevelRequirement { get; set; }
+	public long LevelRequirement { get; set; }
 
 	#region NotMapped
 
@@ -26,7 +26,7 @@ public class DutyModel : BaseModel
 	public DutyTypeEnum? DutyType
 	{
 		get => DutyTypeId.HasValue ? (DutyTypeEnum?)DutyTypeId.Value : null;
-		set => DutyTypeId = value.HasValue ? (int?)value.Value : null;
+		set => DutyTypeId = value.HasValue ? (long?)value.Value : null;
 	}
 
 	[NotMapped]
@@ -36,7 +36,7 @@ public class DutyModel : BaseModel
 	public ExpansionEnum? Expansion
 	{
 		get => ExpansionId.HasValue ? (ExpansionEnum?)ExpansionId.Value : null;
-		set => ExpansionId = value.HasValue ? (int?)value.Value : null;
+		set => ExpansionId = value.HasValue ? (long?)value.Value : null;
 	}
 	
 	[NotMapped]
