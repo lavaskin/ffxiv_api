@@ -159,4 +159,17 @@ public class MentorRouletteController : ControllerBase
 			return StatusCode(500, new { Error = "An error occurred while deleting the mentor roulette log.", Details = ex.Message });
 		}
 	}
+
+	[HttpGet("[action]")]
+	public async Task<IActionResult> GetStats()
+	{
+		try
+		{
+			throw new NotImplementedException();
+		}
+		catch (Exception ex)
+		{
+			return StatusCode(500, new { Error = "An error occurred while retrieving mentor roulette stats.", Details = ex.Message });
+		}
+	}
 }

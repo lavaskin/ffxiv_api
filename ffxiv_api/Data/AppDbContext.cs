@@ -39,6 +39,7 @@ public class AppDbContext : DbContext
             entity.Property(e => e.Notes).IsRequired();
             entity.Property(e => e.DatePlayed).IsRequired();
             entity.Property(e => e.SortOrder).IsRequired();
+            entity.Property(e => e.Completed).IsRequired();
 
             // Configure foreign key relationship
             entity.HasOne(e => e.DutyModel)

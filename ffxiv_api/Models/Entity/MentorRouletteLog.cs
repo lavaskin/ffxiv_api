@@ -21,6 +21,8 @@ public class MentorRouletteLogModel : BaseModel
 	public int SortOrder { get; set; }
 
 	public long? PlayedJobId { get; set; }
+	
+	public bool Completed { get; set; }
 
 	public string Notes { get; set; } = string.Empty;
 
