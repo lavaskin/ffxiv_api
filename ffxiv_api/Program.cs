@@ -16,8 +16,24 @@ builder.Services.AddSingleton(connectionString ?? throw new InvalidOperationExce
 builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseSqlServer(connectionString));
 
+// Configure CORS to allow requests from local Angular apps
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("AllowAngularApp", policy =>
+    {
+        policy.WithOrigins("http://localhost:4200")
+              .AllowAnyHeader()
+              .AllowAnyMethod();
+    });
+});
+
 var app = builder.Build();
 
 app.MapControllers();
+
+if (app.Environment.IsDevelopment())
+{
+    app.UseCors("AllowAngularApp");
+}
 
 app.Run();
