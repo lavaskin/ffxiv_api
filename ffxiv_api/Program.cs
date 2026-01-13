@@ -5,7 +5,11 @@ using ffxiv_api.Services;
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services
-builder.Services.AddControllers();
+builder.Services.AddControllers()
+    .AddJsonOptions(options =>
+    {
+        options.JsonSerializerOptions.PropertyNameCaseInsensitive = true;
+    });
 builder.Services.AddEndpointsApiExplorer();
 
 // Add SQL connection string
@@ -15,6 +19,9 @@ builder.Services.AddSingleton(connectionString ?? throw new InvalidOperationExce
 // Add DbContext
 builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseSqlServer(connectionString));
+
+// Add Services
+builder.Services.AddScoped<MentorRouletteService>();
 
 // Configure CORS to allow requests from local Angular apps
 builder.Services.AddCors(options =>
