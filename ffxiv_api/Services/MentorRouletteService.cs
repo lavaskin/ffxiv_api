@@ -1,14 +1,15 @@
 using ffxiv_api.Data;
+using Microsoft.EntityFrameworkCore;
 
 namespace ffxiv_api.Services;
 
 public class MentorRouletteService
 {
-	public int GetNextSortOrder(AppDbContext context)
+	public async Task<int> GetNextSortOrder(AppDbContext context)
 	{
 		try
 		{
-			var maxSortOrder = context.MentorRouletteLogs.Max(log => (int?)log.SortOrder) ?? 0;
+			var maxSortOrder = await context.MentorRouletteLogs.MaxAsync(log => (int?)log.SortOrder) ?? 0;
 			return maxSortOrder + 1;
 		}
 		catch (Exception ex)

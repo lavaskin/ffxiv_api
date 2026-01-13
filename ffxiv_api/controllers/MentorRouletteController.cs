@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Mvc;
 using ffxiv_api.Data;
 using Microsoft.EntityFrameworkCore;
 using ffxiv_api.Models.Entity;
+using ffxiv_api.Services;
 
 namespace ffxiv_api.Controllers;
 
@@ -10,10 +11,15 @@ namespace ffxiv_api.Controllers;
 public class MentorRouletteController : ControllerBase
 {
     private readonly AppDbContext _context;
+	private readonly MentorRouletteService _mentorRouletteService;
 
-    public MentorRouletteController(AppDbContext context)
+    public MentorRouletteController(
+		AppDbContext context,
+		MentorRouletteService mentorRouletteService
+	)
     {
         _context = context;
+		_mentorRouletteService = mentorRouletteService;
     }
 
 	/// <summary>
@@ -73,6 +79,7 @@ public class MentorRouletteController : ControllerBase
 		}
 
 		model.MentorRouletteLogId = 0; // Ensure the ID is zero for new entries
+		model.SortOrder = await _mentorRouletteService.GetNextSortOrder(_context);
 		model.DatePlayed = DateTime.UtcNow;
 		model.DutyModel = null;
 
