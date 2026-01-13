@@ -12,7 +12,7 @@ public class AppDbContext : DbContext
     }
 
     public DbSet<DutyModel> Duties { get; set; }
-    public DbSet<MentorRouletteLog> MentorRouletteLogs { get; set; }
+    public DbSet<MentorRouletteLogModel> MentorRouletteLogs { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -31,7 +31,7 @@ public class AppDbContext : DbContext
         });
 
         // Configure MentorRouletteLog
-        modelBuilder.Entity<MentorRouletteLog>(entity =>
+        modelBuilder.Entity<MentorRouletteLogModel>(entity =>
         {
             entity.ToTable("mentor_roulette_log");
             entity.HasKey(e => e.MentorRouletteLogId);

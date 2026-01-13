@@ -1,10 +1,10 @@
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
-using ffxiv_api.Models;
-using ffxiv_api.Models.Entity;
 using ffxiv_api.Models.Enums;
 
-public class MentorRouletteLog : BaseModel
+namespace ffxiv_api.Models.Entity;
+
+public class MentorRouletteLogModel : BaseModel
 {
 	// Navigation Properties
 	public DutyModel? DutyModel { get; set; } = null;
