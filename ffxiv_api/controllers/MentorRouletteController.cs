@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Mvc;
 using ffxiv_api.Data;
+using Microsoft.EntityFrameworkCore;
 using ffxiv_api.Models.Entity;
 
 namespace ffxiv_api.Controllers;
@@ -22,18 +23,48 @@ public class MentorRouletteController : ControllerBase
 	[HttpGet]
 	public async Task<IActionResult> GetMentorRouletteLogs()
 	{
-		throw new NotImplementedException();
+		try
+		{
+			var logs = await _context.MentorRouletteLogs
+				.Include(log => log.DutyModel)
+				.ToListAsync();
+			foreach (var log in logs)
+			{
+				log.SetNotMapped();
+			}
+
+			return Ok(logs);
+		}
+		catch (Exception ex)
+		{
+			return StatusCode(500, new { Error = "An error occurred while retrieving mentor roulette logs.", Details = ex.Message });
+		}
 	}
 
     [HttpGet("{id}")]
 	public async Task<IActionResult> GetMentorRouletteLog(long id)
 	{
-		// Implementation to retrieve MentorRouletteLog by id
-		throw new NotImplementedException();
+		try
+		{
+			var log = await _context.MentorRouletteLogs
+				.Include(log => log.DutyModel)
+				.FirstOrDefaultAsync(l => l.MentorRouletteLogId == id);
+			if (log == null)
+			{
+				return NotFound(new { Error = "Mentor Roulette Log not found." });
+			}
+
+			log.SetNotMapped();
+			return Ok(log);
+		}
+		catch (Exception ex)
+		{
+			return StatusCode(500, new { Error = "An error occurred while retrieving the mentor roulette log.", Details = ex.Message });
+		}
 	}
 	
 	[HttpPost]
-	public async Task<IActionResult> CreateNewLog(MentorRouletteLog model)
+	public async Task<IActionResult> CreateNewLog(MentorRouletteLogModel model)
 	{
 		string? validationError = model.Validate();
 		if (validationError != null)
@@ -55,10 +86,66 @@ public class MentorRouletteController : ControllerBase
 		return CreatedAtAction(nameof(GetMentorRouletteLog), new { id = model.MentorRouletteLogId }, model);
 	}
 
+	[HttpPut("{id}")]
+	public async Task<IActionResult> UpdateLog(long id, MentorRouletteLogModel model)
+	{
+		try
+		{
+			if (id != model.MentorRouletteLogId)
+			{
+				return BadRequest(new { Error = "An unknown error occurred" });
+			}
+
+			string? validationError = model.Validate();
+			if (validationError != null)
+			{
+				return BadRequest(new { Error = validationError });
+			}
+
+			_context.Entry(model).State = EntityState.Modified;
+			await _context.SaveChangesAsync();
+
+			// Set NotMapped properties
+			model.SetNotMapped();
+
+			return Ok(model);
+		}
+		catch (DbUpdateConcurrencyException)
+		{
+			if (!await _context.MentorRouletteLogs.AnyAsync(e => e.MentorRouletteLogId == id))
+			{
+				return NotFound(new { Error = "Mentor Roulette Log not found." });
+			}
+			else
+			{
+				throw;
+			}
+		}
+		catch (Exception ex)
+		{
+			return StatusCode(500, new { Error = "An error occurred while updating the mentor roulette log.", Details = ex.Message });
+		}
+	}
+
 	[HttpDelete("{id}")]
 	public async Task<IActionResult> DeleteLog(long id)
 	{
-		// Implementation to delete a MentorRouletteLog by id
-		throw new NotImplementedException();
+		try
+		{
+			var log = await _context.MentorRouletteLogs.FindAsync(id);
+			if (log == null)
+			{
+				return NotFound(new { Error = "Mentor Roulette Log not found." });
+			}
+
+			_context.MentorRouletteLogs.Remove(log);
+			await _context.SaveChangesAsync();
+
+			return NoContent();
+		}
+		catch (Exception ex)
+		{
+			return StatusCode(500, new { Error = "An error occurred while deleting the mentor roulette log.", Details = ex.Message });
+		}
 	}
 }
