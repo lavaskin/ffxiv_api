@@ -74,6 +74,7 @@ public class MentorRouletteController : ControllerBase
 
 		model.MentorRouletteLogId = 0; // Ensure the ID is zero for new entries
 		model.DatePlayed = DateTime.UtcNow;
+		model.DutyModel = null;
 
 		// Add the new log to the database
 		_context.MentorRouletteLogs.Add(model);
@@ -101,6 +102,9 @@ public class MentorRouletteController : ControllerBase
 			{
 				return BadRequest(new { Error = validationError });
 			}
+
+			// Clear related duty to avoid tracking issues
+			model.DutyModel = null;
 
 			_context.Entry(model).State = EntityState.Modified;
 			await _context.SaveChangesAsync();
