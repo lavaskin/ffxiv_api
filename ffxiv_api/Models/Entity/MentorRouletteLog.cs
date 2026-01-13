@@ -40,7 +40,15 @@ public class MentorRouletteLog : BaseModel
 
 	public void SetNotMapped()
 	{
-		// Set NotMapped properties here
+		if (PlayedJob.HasValue)
+		{
+			PlayedJobLabel = PlayedJob.Value.GetLabel();
+		}
+
+		if (DutyModel != null)
+		{
+			DutyModel.SetNotMapped();
+		}
 	}
 
 	#endregion

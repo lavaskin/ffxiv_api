@@ -84,6 +84,47 @@ public class DutyController : ControllerBase
 		}
 	}
 
+	[HttpPut("{id}")]
+	public async Task<IActionResult> UpdateDuty(long id, DutyModel model)
+	{
+		try
+		{
+			if (id != model.DutyId)
+			{
+				return BadRequest(new { Error = "An unknown error occurred" });
+			}
+
+			string? validationError = model.Validate();
+			if (validationError != null)
+			{
+				return BadRequest(new { Error = validationError });
+			}
+
+			_context.Entry(model).State = EntityState.Modified;
+			await _context.SaveChangesAsync();
+
+			// Set NotMapped properties
+			model.SetNotMapped();
+
+			return Ok(model);
+		}
+		catch (DbUpdateConcurrencyException)
+		{
+			if (!await _context.Duties.AnyAsync(e => e.DutyId == id))
+			{
+				return NotFound(new { Error = "Duty not found." });
+			}
+			else
+			{
+				throw;
+			}
+		}
+		catch (Exception ex)
+		{
+			return StatusCode(500, new { Error = "An error occurred while updating the duty.", Details = ex.Message });
+		}
+	}
+
 	[HttpDelete("{id}")]
 	public async Task<IActionResult> DeleteDuty(long id)
 	{
