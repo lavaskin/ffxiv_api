@@ -56,8 +56,8 @@ public class DutyController : ControllerBase
 		}
 	}
 
-	[HttpGet("[action]")]
-	public async Task<IActionResult> GetResultItems(SearchOptions options)
+	[HttpPost("[action]")]
+	public async Task<IActionResult> GetResultItems([FromBody] SearchOptions options)
 	{
 		try
 		{
@@ -96,7 +96,7 @@ public class DutyController : ControllerBase
 	}
 	
 	[HttpPost]
-	public async Task<IActionResult> CreateNewDuty(DutyModel model)
+	public async Task<IActionResult> CreateNewDuty([FromBody] DutyModel model)
 	{
 		try
 		{
@@ -125,7 +125,7 @@ public class DutyController : ControllerBase
 	}
 
 	[HttpPut("{id}")]
-	public async Task<IActionResult> UpdateDuty(long id, DutyModel model)
+	public async Task<IActionResult> UpdateDuty(long id, [FromBody] DutyModel model)
 	{
 		try
 		{

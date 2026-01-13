@@ -70,7 +70,7 @@ public class MentorRouletteController : ControllerBase
 	}
 	
 	[HttpPost]
-	public async Task<IActionResult> CreateNewLog(MentorRouletteLogModel model)
+	public async Task<IActionResult> CreateNewLog([FromBody] MentorRouletteLogModel model)
 	{
 		string? validationError = model.Validate();
 		if (validationError != null)
@@ -95,7 +95,7 @@ public class MentorRouletteController : ControllerBase
 	}
 
 	[HttpPut("{id}")]
-	public async Task<IActionResult> UpdateLog(long id, MentorRouletteLogModel model)
+	public async Task<IActionResult> UpdateLog(long id, [FromBody] MentorRouletteLogModel model)
 	{
 		try
 		{
