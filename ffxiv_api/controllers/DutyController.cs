@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Mvc;
 using ffxiv_api.Data;
 using ffxiv_api.Models.Entity;
 using Microsoft.EntityFrameworkCore;
+using ffxiv_api.Models.DTOs;
 
 namespace ffxiv_api.Controllers;
 
@@ -52,6 +53,45 @@ public class DutyController : ControllerBase
 		catch (Exception ex)
 		{
 			return StatusCode(500, new { Error = "An error occurred while retrieving the duty.", Details = ex.Message });
+		}
+	}
+
+	[HttpGet("[action]")]
+	public async Task<IActionResult> GetResultItems(SearchOptions options)
+	{
+		try
+		{
+			options.PageSize = Math.Clamp(options.PageSize, 1, 25);
+
+			var query = _context.Duties.AsQueryable();
+			if (!string.IsNullOrEmpty(options.Query))
+			{
+				query = query.Where(d => d.Name.Contains(options.Query));
+			}
+
+			var duties = await query
+				.Take(options.PageSize)
+				.ToListAsync();
+			
+			// Turn the found duties into result items
+			List<ListResultItem> resultItems = new();
+			foreach (var duty in duties)
+			{
+				resultItems.Add(new ListResultItem
+				{
+					Label = duty.Name,
+					Value = duty.DutyId,
+				});
+			}
+
+			// Sort the result items alphabetically by label
+			resultItems = resultItems.OrderBy(ri => ri.Label).ToList();
+
+			return Ok(resultItems);
+		}
+		catch (Exception ex)
+		{
+			return StatusCode(500, new { Error = "An error occurred while retrieving result items.", Details = ex.Message });
 		}
 	}
 	
