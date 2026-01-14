@@ -22,7 +22,9 @@ public class DutyController : ControllerBase
 	{
 		try
 		{
-			var duties = await _context.Duties.ToListAsync();
+			var duties = await _context.Duties
+				.OrderBy(d => d.Name)
+				.ToListAsync();
 			foreach (var duty in duties)
 			{
 				duty.SetNotMapped();
