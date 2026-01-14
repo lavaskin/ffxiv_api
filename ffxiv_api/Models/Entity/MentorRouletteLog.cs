@@ -22,7 +22,9 @@ public class MentorRouletteLogModel : BaseModel
 
 	public long? PlayedJobId { get; set; }
 	
-	public bool Completed { get; set; }
+	public bool Completed { get; set; } = true;
+	
+	public bool Replacement { get; set; } = false;
 
 	public string Notes { get; set; } = string.Empty;
 

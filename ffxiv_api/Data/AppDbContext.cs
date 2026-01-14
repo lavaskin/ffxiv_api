@@ -27,7 +27,6 @@ public class AppDbContext : DbContext
             entity.Property(e => e.DutyTypeId).IsRequired(false);
             entity.Property(e => e.ExpansionId).IsRequired(false);
             entity.Property(e => e.LevelRequirement).IsRequired();
-            
         });
 
         // Configure MentorRouletteLog
@@ -39,7 +38,6 @@ public class AppDbContext : DbContext
             entity.Property(e => e.Notes).IsRequired();
             entity.Property(e => e.DatePlayed).IsRequired();
             entity.Property(e => e.SortOrder).IsRequired();
-            entity.Property(e => e.Completed).IsRequired();
 
             // Configure foreign key relationship
             entity.HasOne(e => e.DutyModel)
