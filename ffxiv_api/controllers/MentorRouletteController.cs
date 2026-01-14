@@ -33,6 +33,7 @@ public class MentorRouletteController : ControllerBase
 		{
 			var logs = await _context.MentorRouletteLogs
 				.Include(log => log.DutyModel)
+				.OrderByDescending(log => log.SortOrder)
 				.ToListAsync();
 			foreach (var log in logs)
 			{
