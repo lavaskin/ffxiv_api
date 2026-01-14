@@ -72,26 +72,32 @@ public class MentorRouletteController : ControllerBase
 	[HttpPost]
 	public async Task<IActionResult> CreateNewLog([FromBody] MentorRouletteLogModel model)
 	{
-		string? validationError = model.Validate();
-		if (validationError != null)
+		try
 		{
-			return BadRequest(new { Error = validationError });
+            string? validationError = model.Validate();
+            if (validationError != null)
+            {
+                return BadRequest(new { Error = validationError });
+            }
+
+			model.MentorRouletteLogId = 0; // Ensure the ID is zero for new entries
+			model.SortOrder = await _mentorRouletteService.GetNextSortOrder(_context);
+			model.DatePlayed = DateTime.UtcNow;
+
+            // Add the new log to the database
+            _context.MentorRouletteLogs.Add(model);
+            await _context.SaveChangesAsync();
+
+            // Set NotMapped properties
+            model.SetNotMapped();
+
+            // Return the created log with a 201 status
+            return CreatedAtAction(nameof(GetMentorRouletteLog), new { id = model.MentorRouletteLogId }, model);
+        }
+		catch (Exception ex)
+		{
+			return StatusCode(500, new { Error = "An error occurred while creating the mentor roulette log.", Details = ex.Message });
 		}
-
-		model.MentorRouletteLogId = 0; // Ensure the ID is zero for new entries
-		model.SortOrder = await _mentorRouletteService.GetNextSortOrder(_context);
-		model.DatePlayed = DateTime.UtcNow;
-		model.DutyModel = null;
-
-		// Add the new log to the database
-		_context.MentorRouletteLogs.Add(model);
-		await _context.SaveChangesAsync();
-
-		// Set NotMapped properties
-		model.SetNotMapped();
-
-		// Return the created log with a 201 status
-		return CreatedAtAction(nameof(GetMentorRouletteLog), new { id = model.MentorRouletteLogId }, model);
 	}
 
 	[HttpPut("{id}")]
