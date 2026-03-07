@@ -39,13 +39,6 @@ The project uses **User Secrets** to store sensitive configuration like database
    dotnet user-secrets list
    ```
 
-#### How It Works
-
-- User secrets are stored in: `%APPDATA%\Microsoft\UserSecrets\<user_secrets_id>\secrets.json` (Windows)
-- This location is **outside your project directory** and won't be committed to git
-- The secrets are automatically loaded in Development environment
-- `appsettings.Development.json` is excluded via `.gitignore`
-
 ### Production Environment
 
 For production deployments, use environment variables or a secure vault service:
@@ -78,7 +71,8 @@ The API will start on `http://localhost:5071` (or check console output for the a
 
 ```
 ffxiv_api/
-├── controllers/        # API controllers
-├── models/             # Data models
+├── Controllers/        # API controllers
+├── Data/               # Entity Framework Context Definitions
+├── Models/             # Data models
 ├── Program.cs          # Application entry point
 ```

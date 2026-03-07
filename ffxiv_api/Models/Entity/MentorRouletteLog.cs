@@ -64,7 +64,7 @@ public class MentorRouletteLogModel : BaseModel
 			return "Must have an associated duty";
 		}
 		
-		if (!PlayedJobId.HasValue || PlayedJobId <= 0)
+		if (!PlayedJobId.HasValue || !Enum.IsDefined(typeof(JobEnum), (JobEnum)PlayedJobId.Value))
 		{
 			return "Must have a valid played job";
 		}
