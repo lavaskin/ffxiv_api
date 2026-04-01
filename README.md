@@ -51,7 +51,7 @@ The API will start on `http://localhost:5071` (or check console output for the a
 
 ## Project Structure
 
-```
+```text
 ffxiv_api/
 ├── Controllers/        # API controllers
 ├── Data/               # Entity Framework Context Definitions
