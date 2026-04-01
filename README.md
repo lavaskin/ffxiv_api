@@ -1,12 +1,12 @@
 # FFXIV API
 
-A simple .NET 8 Web API for FFXIV data with SQL Server integration.
+A simple .NET 10 Web API for FFXIV data with SQL Server integration.
 
 There is *currently* no authentication, as it was built under the assumption I'll just be running it locally for myself. Everything is insecure, blah blah blah
 
 ## Prerequisites
 
-- .NET 8 SDK
+- .NET 10 SDK
 - SQL Server access (tested with SQL Server 2019+)
 
 ### Development Environment
