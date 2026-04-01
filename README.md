@@ -30,7 +30,7 @@ The project uses **User Secrets** to store sensitive configuration like database
    Example:
 
    ```bash
-   dotnet user-secrets set "SQL:ConnectionString" "Server=192.168.1.196;Database=ffxiv;User Id=dev;Password=YourPassword;TrustServerCertificate=True;"
+   dotnet user-secrets set "SQL:ConnectionString" "Server=YOUR_SERVER;Database=YOUR_DB;User Id=YOUR_USER;Password=YOUR_PASSWORD;TrustServerCertificate=True;"
    ```
 
 3. View your stored secrets (optional):
