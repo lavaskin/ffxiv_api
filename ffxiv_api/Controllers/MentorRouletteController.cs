@@ -82,8 +82,14 @@ public class MentorRouletteController : ControllerBase
             }
 
 			model.MentorRouletteLogId = 0; // Ensure the ID is zero for new entries
-			model.SortOrder = await _mentorRouletteService.GetNextSortOrder(_context);
 			model.DatePlayed = DateTime.UtcNow;
+
+			int? nextSortOrder = await _mentorRouletteService.GetNextSortOrderAsync(_context);
+			if (nextSortOrder == null)
+			{
+				return StatusCode(500, new { Error = "An error occurred while determining the next sort order for the mentor roulette log." });
+			}
+			model.SortOrder = nextSortOrder.Value;
 
             // Add the new log to the database
             _context.MentorRouletteLogs.Add(model);

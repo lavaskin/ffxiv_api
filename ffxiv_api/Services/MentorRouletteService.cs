@@ -5,7 +5,7 @@ namespace ffxiv_api.Services;
 
 public class MentorRouletteService
 {
-	public async Task<int> GetNextSortOrder(AppDbContext context)
+	public async Task<int?> GetNextSortOrderAsync(AppDbContext context)
 	{
 		try
 		{
@@ -15,7 +15,7 @@ public class MentorRouletteService
 		catch (Exception ex)
 		{
 			Console.WriteLine($"Error getting next sort order: {ex.Message}");
-			return 1;
+			return null;
 		}
 	}
 }
