@@ -10,6 +10,20 @@ public class DutyService
 	{
 		return await context.Duties.FindAsync(dutyId);
 	}
+
+	public async Task<bool> CheckIfDutyNameExistsAsync(AppDbContext context, string dutyName)
+	{
+		try
+		{
+			string normalizedName = dutyName.Trim().ToLower();
+			return await context.Duties.AnyAsync(duty => duty.Name.ToLower() == normalizedName);
+		}
+		catch (Exception ex)
+		{
+			Console.WriteLine($"Error checking if duty name exists: {ex.Message}");
+			return false;
+		}
+	}
 	
 	public async Task<bool> CheckIfDutyHasLogsAsync(AppDbContext context, long dutyId)
 	{

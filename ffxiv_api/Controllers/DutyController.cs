@@ -114,6 +114,12 @@ public class DutyController : ControllerBase
 				return BadRequest(new { Error = validationError });
 			}
 
+			bool dutyNameExists = await _dutyService.CheckIfDutyNameExistsAsync(_context, model.Name);
+			if (dutyNameExists)
+			{
+				return BadRequest(new { Error = "A duty with this name already exists." });
+			}
+
 			model.DutyId = 0; // Ensure the ID is zero for new entries
 
 			// Add the new duty to the database
