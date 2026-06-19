@@ -42,6 +42,12 @@ public class DutyModel : BaseModel
 	[NotMapped]
 	public string? ExpansionLabel { get; set; }
 
+	[NotMapped]
+	public DutyClassificationEnum? DutyClassification { get; set; }
+
+	[NotMapped]
+	public string? DutyClassificationLabel { get; set; }
+
 	public void SetNotMapped()
 	{
 		if (DutyType.HasValue)
@@ -52,6 +58,13 @@ public class DutyModel : BaseModel
 		if (Expansion.HasValue)
 		{
 			ExpansionLabel = Expansion.Value.GetLabel();
+		}
+
+		DutyClassification = DutyHelper.ClassifyDutyType(this);
+
+		if (DutyClassification.HasValue)
+		{
+			DutyClassificationLabel = DutyClassification.Value.GetLabel();
 		}
 	}
 

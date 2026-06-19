@@ -1,3 +1,4 @@
+using ffxiv_api.Models.Entity;
 using ffxiv_api.Models.Enums;
 
 public static class DutyHelper
@@ -42,5 +43,10 @@ public static class DutyHelper
 		}
 
 		return levelRequirement >= min && levelRequirement <= max;
+	}
+
+	public static DutyClassificationEnum? ClassifyDutyType(DutyModel duty)
+	{
+		return null; // Placeholder for future implementation
 	}
 }
