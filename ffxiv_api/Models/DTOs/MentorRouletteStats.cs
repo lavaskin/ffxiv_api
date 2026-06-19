@@ -4,6 +4,13 @@ public class MentorRouletteStats
 {
 	public int TotalRuns { get; set; }
 
+	public int CompletedRoulettes { get; set; }
+	
+	/// <summary>
+	/// Completed Roulettes / 2000 Completions needed for the achievement
+	/// </summary>
+	public int AchievementProgressPercent { get; set; }
+	
 	public string MostRanDuty { get; set; } = string.Empty;
 
 	public int MostRanDutyCount { get; set; }
