@@ -178,7 +178,8 @@ public class MentorRouletteController : ControllerBase
 	{
 		try
 		{
-			throw new NotImplementedException();
+			var stats = await _mentorRouletteService.GetStatsAsync(_context);
+			return Ok(stats);
 		}
 		catch (Exception ex)
 		{
