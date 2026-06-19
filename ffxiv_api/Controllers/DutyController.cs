@@ -3,6 +3,7 @@ using ffxiv_api.Data;
 using ffxiv_api.Models.Entity;
 using Microsoft.EntityFrameworkCore;
 using ffxiv_api.Models.DTOs;
+using ffxiv_api.Services;
 
 namespace ffxiv_api.Controllers;
 
@@ -11,10 +12,15 @@ namespace ffxiv_api.Controllers;
 public class DutyController : ControllerBase
 {
     private readonly AppDbContext _context;
+    private readonly DutyService _dutyService;
 
-    public DutyController(AppDbContext context)
+    public DutyController(
+		AppDbContext context,
+		DutyService dutyService
+	)
     {
         _context = context;
+		_dutyService = dutyService;
     }
 
 	[HttpGet]
@@ -43,7 +49,7 @@ public class DutyController : ControllerBase
 	{
 		try
 		{
-			var duty = await _context.Duties.FindAsync(id);
+			var duty = await _dutyService.GetDutyAsync(_context, id);
 			if (duty == null)
 			{
 				return NotFound(new { Error = "Duty not found." });
@@ -172,10 +178,16 @@ public class DutyController : ControllerBase
 	{
 		try
 		{
-			var duty = await _context.Duties.FindAsync(id);
+			var duty = await _dutyService.GetDutyAsync(_context, id);
 			if (duty == null)
 			{
 				return NotFound(new { Error = "Duty not found." });
+			}
+
+			bool hasLogs = await _dutyService.CheckIfDutyHasLogsAsync(_context, id);
+			if (hasLogs)
+			{
+				return BadRequest(new { Error = "Cannot delete duty with existing logs." });
 			}
 
 			_context.Duties.Remove(duty);
