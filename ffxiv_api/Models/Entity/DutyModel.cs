@@ -80,6 +80,12 @@ public class DutyModel : BaseModel
 			return "The level requirement must be between 1 and 100.";
 		}
 
+		bool validLevelRequirement = DutyHelper.VerifyDutyMeetsLevelRequirement(ExpansionId.Value, LevelRequirement);
+		if (!validLevelRequirement)
+		{
+			return "The level requirement does not meet the expected range for the specified expansion.";
+		}
+
 		return null;
 	}
 }
