@@ -22,6 +22,7 @@ builder.Services.AddDbContext<AppDbContext>(options =>
 
 // Add Services
 builder.Services.AddScoped<MentorRouletteService>();
+builder.Services.AddScoped<DutyService>();
 
 // Configure CORS to allow requests from local Angular apps
 builder.Services.AddCors(options =>
