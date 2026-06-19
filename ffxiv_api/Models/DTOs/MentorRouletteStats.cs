@@ -10,15 +10,15 @@ public class MentorRouletteStats
 	/// Completed Roulettes / 2000 Completions needed for the achievement
 	/// </summary>
 	public int AchievementProgressPercent { get; set; }
-	
-	public string MostRanDuty { get; set; } = string.Empty;
 
-	public int MostRanDutyCount { get; set; }
+	public List<SeenDutyStat> TopSeenDuties { get; set; } = [];
 
 	/// <summary>
 	/// The expansion with the most related duties (excluding guildhests)
 	/// </summary>
 	public string MostCommonExpansion { get; set; } = string.Empty;
+
+	public List<PlayedJobStat> TopPlayedJobs { get; set; } = [];
 
 	public int TotalFailedDuties { get; set; }
 

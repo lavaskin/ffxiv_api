@@ -32,17 +32,18 @@ public class MentorRouletteService
 			.Where(log => log.DutyModel?.DutyTypeId == (long)DutyTypeEnum.ExtremeTrial)
 			.ToList();
 
-		var mostRanDuty = logs
+		var topSeenDuties = logs
 			.Where(log => log.DutyModel != null)
 			.GroupBy(log => log.DutyModel!.Name)
 			.OrderByDescending(group => group.Count())
 			.ThenBy(group => group.Key)
-			.Select(group => new
+			.Take(3)
+			.Select(group => new SeenDutyStat
 			{
-				Name = group.Key,
+				DutyName = group.Key,
 				Count = group.Count(),
 			})
-			.FirstOrDefault();
+			.ToList();
 
 		var mostCommonExpansion = logs
 			.Where(log =>
@@ -54,14 +55,29 @@ public class MentorRouletteService
 			.Select(group => group.Key.GetLabel())
 			.FirstOrDefault() ?? string.Empty;
 
+		var topPlayedJobs = logs
+			.Where(log =>
+				log.PlayedJobId.HasValue &&
+				Enum.IsDefined(typeof(JobEnum), (int)log.PlayedJobId.Value))
+			.GroupBy(log => (JobEnum)log.PlayedJobId!.Value)
+			.OrderByDescending(group => group.Count())
+			.ThenBy(group => group.Key)
+			.Take(3)
+			.Select(group => new PlayedJobStat
+			{
+				JobLabel = group.Key.GetLabel(),
+				Count = group.Count(),
+			})
+			.ToList();
+
 		return new MentorRouletteStats
 		{
 			TotalRuns = logs.Count,
 			CompletedRoulettes = completedRoulettes,
 			AchievementProgressPercent = Math.Clamp((int)Math.Round(completedRoulettes * 100.0 / 2000), 0, 100),
-			MostRanDuty = mostRanDuty?.Name ?? string.Empty,
-			MostRanDutyCount = mostRanDuty?.Count ?? 0,
+			TopSeenDuties = topSeenDuties,
 			MostCommonExpansion = mostCommonExpansion,
+			TopPlayedJobs = topPlayedJobs,
 			TotalFailedDuties = logs.Count(log => !log.Completed),
 			NumberExtremeTrials = extremeTrialLogs.Count,
 			ExtremeTrialClearPercent = extremeTrialLogs.Count == 0
