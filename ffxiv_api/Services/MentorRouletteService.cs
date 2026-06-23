@@ -34,6 +34,10 @@ public class MentorRouletteService
 				log.DutyModel.DutyTypeId != (long)DutyTypeEnum.Guildhest)
 			.ToList();
 
+		var playedJobChartEligibleLogs = logs
+			.Where(log => log.DutyModel?.DutyTypeId != null)
+			.ToList();
+
 		var completedRoulettes = logs.Count(log => log.Completed);
 		var extremeTrialLogs = logs
 			.Where(log => log.DutyModel?.DutyTypeId == (long)DutyTypeEnum.ExtremeTrial)
@@ -69,10 +73,9 @@ public class MentorRouletteService
 
 		var trackedDutyTypes = Enum
 			.GetValues<DutyTypeEnum>()
-			.Where(dutyType => dutyType != DutyTypeEnum.Guildhest)
 			.ToList();
 
-		var playedJobDutyTypeBreakdown = chartEligibleLogs
+		var playedJobDutyTypeBreakdown = playedJobChartEligibleLogs
 			.Where(log =>
 				log.PlayedJobId.HasValue &&
 				Enum.IsDefined(typeof(JobEnum), (int)log.PlayedJobId.Value))
@@ -91,6 +94,12 @@ public class MentorRouletteService
 					.Where(stat => stat.Count > 0)
 					.ToList(),
 			})
+			.ToList();
+
+		// We don't want to include Guildhests in the duty expansion breakdown, so we filter them out here.
+		// They pollute the data
+		trackedDutyTypes = trackedDutyTypes
+			.Where(dutyType => dutyType != DutyTypeEnum.Guildhest)
 			.ToList();
 
 		var dutyExpansionBreakdown = chartEligibleLogs
