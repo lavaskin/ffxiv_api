@@ -15,6 +15,8 @@ public class MentorRouletteStats
 
 	public List<PlayedJobStat> TopPlayedJobs { get; set; } = [];
 
+	public List<PlayedJobDutyBreakdownStat> PlayedJobDutyTypeBreakdown { get; set; } = [];
+
 	public int TotalFailedDuties { get; set; }
 
 	public int NumberExtremeTrials { get; set; }

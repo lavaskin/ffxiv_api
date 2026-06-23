@@ -72,6 +72,27 @@ public class MentorRouletteService
 			.Where(dutyType => dutyType != DutyTypeEnum.Guildhest)
 			.ToList();
 
+		var playedJobDutyTypeBreakdown = chartEligibleLogs
+			.Where(log =>
+				log.PlayedJobId.HasValue &&
+				Enum.IsDefined(typeof(JobEnum), (int)log.PlayedJobId.Value))
+			.GroupBy(log => (JobEnum)log.PlayedJobId!.Value)
+			.OrderByDescending(group => group.Count())
+			.ThenBy(group => group.Key)
+			.Select(group => new PlayedJobDutyBreakdownStat
+			{
+				JobLabel = group.Key.GetLabel(),
+				DutyTypes = trackedDutyTypes
+					.Select(dutyType => new DutyTypeBreakdownStat
+					{
+						DutyTypeLabel = dutyType.GetLabel(),
+						Count = group.Count(log => (DutyTypeEnum)log.DutyModel!.DutyTypeId!.Value == dutyType),
+					})
+					.Where(stat => stat.Count > 0)
+					.ToList(),
+			})
+			.ToList();
+
 		var dutyExpansionBreakdown = chartEligibleLogs
 			.GroupBy(log => (ExpansionEnum)log.DutyModel!.ExpansionId!.Value)
 			.OrderBy(group => group.Key)
@@ -96,6 +117,7 @@ public class MentorRouletteService
 			AchievementProgressPercent = Math.Clamp((int)Math.Round(completedRoulettes * 100.0 / 2000), 0, 100),
 			TopSeenDuties = topSeenDuties,
 			TopPlayedJobs = topPlayedJobs,
+			PlayedJobDutyTypeBreakdown = playedJobDutyTypeBreakdown,
 			TotalFailedDuties = logs.Count(log => !log.Completed),
 			NumberExtremeTrials = extremeTrialLogs.Count,
 			ExtremeTrialClearPercent = extremeTrialLogs.Count == 0
