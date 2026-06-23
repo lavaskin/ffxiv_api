@@ -13,11 +13,6 @@ public class MentorRouletteStats
 
 	public List<SeenDutyStat> TopSeenDuties { get; set; } = [];
 
-	/// <summary>
-	/// The expansion with the most related duties (excluding guildhests)
-	/// </summary>
-	public string MostCommonExpansion { get; set; } = string.Empty;
-
 	public List<PlayedJobStat> TopPlayedJobs { get; set; } = [];
 
 	public int TotalFailedDuties { get; set; }
@@ -25,4 +20,6 @@ public class MentorRouletteStats
 	public int NumberExtremeTrials { get; set; }
 
 	public int ExtremeTrialClearPercent { get; set; }
+
+	public List<DutyExpansionBreakdownStat> DutyExpansionBreakdown { get; set; } = [];
 }
