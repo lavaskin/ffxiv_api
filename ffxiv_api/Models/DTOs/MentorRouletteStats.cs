@@ -17,6 +17,12 @@ public class MentorRouletteStats
 
 	public List<PlayedJobDutyBreakdownStat> PlayedJobDutyTypeBreakdown { get; set; } = [];
 
+	/// <summary>
+	/// Every duty type played, stacked by the role (Tank / Healer / DPS) it was played as,
+	/// ordered by total frequency descending
+	/// </summary>
+	public List<DutyTypeRoleBreakdownStat> DutyTypeRoleBreakdown { get; set; } = [];
+
 	public int TotalFailedDuties { get; set; }
 
 	public int NumberExtremeTrials { get; set; }

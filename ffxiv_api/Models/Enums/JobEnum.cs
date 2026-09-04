@@ -76,4 +76,26 @@ public static class JobEnumExtensions
 			_ => "Unknown"
 		};
 	}
+
+	/// <summary>
+	/// Collapses a job down to its combat role. The melee, magical ranged and physical
+	/// ranged sub-roles are all reported as <see cref="JobRoleEnum.Dps"/>.
+	/// </summary>
+	public static JobRoleEnum GetRole(this JobEnum job)
+	{
+		return job switch
+		{
+			JobEnum.Paladin => JobRoleEnum.Tank,
+			JobEnum.Warrior => JobRoleEnum.Tank,
+			JobEnum.DarkKnight => JobRoleEnum.Tank,
+			JobEnum.Gunbreaker => JobRoleEnum.Tank,
+
+			JobEnum.WhiteMage => JobRoleEnum.Healer,
+			JobEnum.Scholar => JobRoleEnum.Healer,
+			JobEnum.Astrologian => JobRoleEnum.Healer,
+			JobEnum.Sage => JobRoleEnum.Healer,
+
+			_ => JobRoleEnum.Dps
+		};
+	}
 }

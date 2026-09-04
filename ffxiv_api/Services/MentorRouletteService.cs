@@ -96,6 +96,35 @@ public class MentorRouletteService
 			})
 			.ToList();
 
+		var trackedJobRoles = Enum
+			.GetValues<JobRoleEnum>()
+			.ToList();
+
+		// Guildhests are deliberately kept here, matching the played job duty type breakdown above.
+		// Must be computed before Guildhests are stripped from trackedDutyTypes below.
+		var dutyTypeRoleBreakdown = playedJobChartEligibleLogs
+			.Where(log =>
+				log.PlayedJobId.HasValue &&
+				Enum.IsDefined(typeof(JobEnum), (int)log.PlayedJobId.Value) &&
+				Enum.IsDefined(typeof(DutyTypeEnum), (int)log.DutyModel!.DutyTypeId!.Value))
+			.GroupBy(log => (DutyTypeEnum)log.DutyModel!.DutyTypeId!.Value)
+			.OrderByDescending(group => group.Count())
+			.ThenBy(group => group.Key)
+			.Select(group => new DutyTypeRoleBreakdownStat
+			{
+				DutyTypeLabel = group.Key.GetLabel(),
+				Count = group.Count(),
+				Roles = trackedJobRoles
+					.Select(jobRole => new JobRoleBreakdownStat
+					{
+						RoleLabel = jobRole.GetLabel(),
+						Count = group.Count(log => ((JobEnum)log.PlayedJobId!.Value).GetRole() == jobRole),
+					})
+					.Where(stat => stat.Count > 0)
+					.ToList(),
+			})
+			.ToList();
+
 		// We don't want to include Guildhests in the duty expansion breakdown, so we filter them out here.
 		// They pollute the data
 		trackedDutyTypes = trackedDutyTypes
@@ -127,6 +156,7 @@ public class MentorRouletteService
 			TopSeenDuties = topSeenDuties,
 			TopPlayedJobs = topPlayedJobs,
 			PlayedJobDutyTypeBreakdown = playedJobDutyTypeBreakdown,
+			DutyTypeRoleBreakdown = dutyTypeRoleBreakdown,
 			TotalFailedDuties = logs.Count(log => !log.Completed),
 			NumberExtremeTrials = extremeTrialLogs.Count,
 			ExtremeTrialClearPercent = extremeTrialLogs.Count == 0
