@@ -1,47 +1,45 @@
-using Microsoft.EntityFrameworkCore;
 using ffxiv_api.Data;
 using ffxiv_api.Services;
+using Microsoft.EntityFrameworkCore;
+
+const string AngularDevCorsPolicy = "AllowAngularApp";
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Add services
-builder.Services.AddControllers()
-    .AddJsonOptions(options =>
-    {
-        options.JsonSerializerOptions.PropertyNameCaseInsensitive = true;
-    });
-builder.Services.AddEndpointsApiExplorer();
+var connectionString = builder.Configuration["SQL:ConnectionString"]
+	?? throw new InvalidOperationException("Missing 'SQL:ConnectionString'. See the README for setting it with user secrets.");
 
-// Add SQL connection string
-var connectionString = builder.Configuration["SQL:ConnectionString"];
-builder.Services.AddSingleton(connectionString ?? throw new InvalidOperationException("Connection string not found"));
-
-// Add DbContext
-builder.Services.AddDbContext<AppDbContext>(options =>
-    options.UseSqlServer(connectionString));
-
-// Add Services
-builder.Services.AddScoped<MentorRouletteService>();
+builder.Services.AddDbContext<AppDbContext>(options => options.UseSqlServer(connectionString));
+builder.Services.AddSingleton(TimeProvider.System);
+builder.Services.AddSingleton<MentorRouletteStatsCache>();
 builder.Services.AddScoped<DutyService>();
+builder.Services.AddScoped<MentorRouletteService>();
 
-// Configure CORS to allow requests from local Angular apps
+builder.Services.AddControllers();
+
+// Unhandled exceptions become a ProblemDetails 500 (logged, no internals leaked).
+// Expected failures are returned by services as ServiceError and mapped in the controllers.
+builder.Services.AddProblemDetails();
+
 builder.Services.AddCors(options =>
 {
-    options.AddPolicy("AllowAngularApp", policy =>
-    {
-        policy.WithOrigins("http://localhost:4200")
-              .AllowAnyHeader()
-              .AllowAnyMethod();
-    });
+	options.AddPolicy(AngularDevCorsPolicy, policy =>
+	{
+		policy.WithOrigins("http://localhost:4200")
+			.AllowAnyHeader()
+			.AllowAnyMethod();
+	});
 });
 
 var app = builder.Build();
 
-app.MapControllers();
+app.UseExceptionHandler();
 
 if (app.Environment.IsDevelopment())
 {
-    app.UseCors("AllowAngularApp");
+	app.UseCors(AngularDevCorsPolicy);
 }
+
+app.MapControllers();
 
 app.Run();

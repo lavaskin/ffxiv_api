@@ -1,74 +1,36 @@
-using System.ComponentModel.DataAnnotations;
-using System.ComponentModel.DataAnnotations.Schema;
 using ffxiv_api.Models.Enums;
 
 namespace ffxiv_api.Models.Entity;
 
-public class MentorRouletteLogModel : BaseModel
+/// <summary>
+/// A row in the <c>mentor_roulette_log</c> table. Persistence only: never bind this from a request or
+/// return it from an endpoint. Use <see cref="DTOs.MentorRouletteLogRequest"/> /
+/// <see cref="DTOs.MentorRouletteLogResponse"/> instead.
+/// Mapping lives in <see cref="Data.Configurations.MentorRouletteLogConfiguration"/>.
+/// </summary>
+public class MentorRouletteLog
 {
-	// Navigation Properties
-	public DutyModel? DutyModel { get; set; } = null;
-	
-	/// <summary>
-	/// Primary Key
-	/// </summary>
-	[Key]
 	public long MentorRouletteLogId { get; set; }
 
-	[ForeignKey("DutyModel")]
 	public long DutyId { get; set; }
-	
+
+	public Duty Duty { get; set; } = null!;
+
+	/// <summary>
+	/// The run number shown to the user (1, 2, 3...). Assigned on creation and never changed by updates.
+	/// </summary>
 	public int SortOrder { get; set; }
 
-	public long? PlayedJobId { get; set; }
-	
+	public JobEnum PlayedJob { get; set; }
+
 	public bool Completed { get; set; } = true;
-	
-	public bool Replacement { get; set; } = false;
+
+	public bool Replacement { get; set; }
 
 	public string Notes { get; set; } = string.Empty;
 
+	/// <summary>
+	/// UTC timestamp assigned on creation and never changed by updates.
+	/// </summary>
 	public DateTime DatePlayed { get; set; }
-
-	#region NotMapped
-
-	[NotMapped]
-	public JobEnum? PlayedJob
-	{
-		get => PlayedJobId.HasValue ? (JobEnum?)PlayedJobId.Value : null;
-		set => PlayedJobId = value.HasValue ? (long?)value.Value : null;
-	}
-
-	[NotMapped]
-	public string? PlayedJobLabel { get; set; }
-
-	public void SetNotMapped()
-	{
-		if (PlayedJob.HasValue)
-		{
-			PlayedJobLabel = PlayedJob.Value.GetLabel();
-		}
-
-		if (DutyModel != null)
-		{
-			DutyModel.SetNotMapped();
-		}
-	}
-
-	#endregion
-	
-	public override string? Validate()
-	{
-		if (DutyId <= 0)
-		{
-			return "Must have an associated duty";
-		}
-		
-		if (!PlayedJobId.HasValue || !Enum.IsDefined(typeof(JobEnum), (JobEnum)PlayedJobId.Value))
-		{
-			return "Must have a valid played job";
-		}
-
-		return null;
-	}
 }

@@ -1,209 +1,55 @@
-using Microsoft.AspNetCore.Mvc;
-using ffxiv_api.Data;
-using ffxiv_api.Models.Entity;
-using Microsoft.EntityFrameworkCore;
 using ffxiv_api.Models.DTOs;
 using ffxiv_api.Services;
+using Microsoft.AspNetCore.Mvc;
 
 namespace ffxiv_api.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
-public class DutyController : ControllerBase
+public class DutyController(DutyService dutyService) : ControllerBase
 {
-    private readonly AppDbContext _context;
-    private readonly DutyService _dutyService;
-
-    public DutyController(
-		AppDbContext context,
-		DutyService dutyService
-	)
-    {
-        _context = context;
-		_dutyService = dutyService;
-    }
-
 	[HttpGet]
-	public async Task<IActionResult> GetDuties()
+	public async Task<List<DutyResponse>> GetDuties()
 	{
-		try
-		{
-			var duties = await _context.Duties
-				.OrderBy(d => d.Name)
-				.ToListAsync();
-			foreach (var duty in duties)
-			{
-				duty.SetNotMapped();
-			}
-
-			return Ok(duties);
-		}
-		catch (Exception ex)
-		{
-			return StatusCode(500, new { Error = "An error occurred while retrieving duties.", Details = ex.Message });
-		}
+		return await dutyService.GetAllAsync();
 	}
 
-    [HttpGet("{id}")]
-	public async Task<IActionResult> GetDuty(long id)
+	[HttpGet("{id}")]
+	public async Task<ActionResult<DutyResponse>> GetDuty(long id)
 	{
-		try
-		{
-			var duty = await _dutyService.GetDutyAsync(_context, id);
-			if (duty == null)
-			{
-				return NotFound(new { Error = "Duty not found." });
-			}
-
-			duty.SetNotMapped();
-			return Ok(duty);
-		}
-		catch (Exception ex)
-		{
-			return StatusCode(500, new { Error = "An error occurred while retrieving the duty.", Details = ex.Message });
-		}
+		var result = await dutyService.GetAsync(id);
+		return result.IsSuccess ? result.Value : result.Error.ToActionResult();
 	}
 
+	/// <summary>
+	/// Duty picker search. POST and the route name are kept for the existing client.
+	/// </summary>
 	[HttpPost("[action]")]
-	public async Task<IActionResult> GetResultItems([FromBody] SearchOptions options)
+	public async Task<List<ListResultItem>> GetResultItems(SearchOptions options)
 	{
-		try
-		{
-			options.PageSize = Math.Clamp(options.PageSize, 1, 25);
-
-			var query = _context.Duties.AsQueryable();
-			if (!string.IsNullOrEmpty(options.Query))
-			{
-				query = query.Where(d => d.Name.Contains(options.Query));
-			}
-
-			var duties = await query
-				.Take(options.PageSize)
-				.ToListAsync();
-			
-			// Turn the found duties into result items
-			List<ListResultItem> resultItems = new();
-			foreach (var duty in duties)
-			{
-				resultItems.Add(new ListResultItem
-				{
-					Label = duty.Name,
-					Value = duty.DutyId,
-				});
-			}
-
-			// Sort the result items alphabetically by label
-			resultItems = resultItems.OrderBy(ri => ri.Label).ToList();
-
-			return Ok(resultItems);
-		}
-		catch (Exception ex)
-		{
-			return StatusCode(500, new { Error = "An error occurred while retrieving result items.", Details = ex.Message });
-		}
+		return await dutyService.SearchAsync(options);
 	}
-	
+
 	[HttpPost]
-	public async Task<IActionResult> CreateNewDuty([FromBody] DutyModel model)
+	public async Task<ActionResult<DutyResponse>> CreateNewDuty(DutyRequest request)
 	{
-		try
-		{
-			string? validationError = model.Validate();
-			if (validationError != null)
-			{
-				return BadRequest(new { Error = validationError });
-			}
-
-			bool dutyNameExists = await _dutyService.CheckIfDutyNameExistsAsync(_context, model.Name);
-			if (dutyNameExists)
-			{
-				return BadRequest(new { Error = "A duty with this name already exists." });
-			}
-
-			model.DutyId = 0; // Ensure the ID is zero for new entries
-
-			// Add the new duty to the database
-			_context.Duties.Add(model);
-			await _context.SaveChangesAsync();
-
-			// Set NotMapped properties
-			model.SetNotMapped();
-
-			// Return the created duty with a 201 status
-			return CreatedAtAction(nameof(GetDuty), new { id = model.DutyId }, model);
-		}
-		catch (Exception ex)
-		{
-			return StatusCode(500, new { Error = "An error occurred while creating the duty.", Details = ex.Message });
-		}
+		var result = await dutyService.CreateAsync(request);
+		return result.IsSuccess
+			? CreatedAtAction(nameof(GetDuty), new { id = result.Value.DutyId }, result.Value)
+			: result.Error.ToActionResult();
 	}
 
 	[HttpPut("{id}")]
-	public async Task<IActionResult> UpdateDuty(long id, [FromBody] DutyModel model)
+	public async Task<ActionResult<DutyResponse>> UpdateDuty(long id, DutyRequest request)
 	{
-		try
-		{
-			if (id != model.DutyId)
-			{
-				return BadRequest(new { Error = "An unknown error occurred" });
-			}
-
-			string? validationError = model.Validate();
-			if (validationError != null)
-			{
-				return BadRequest(new { Error = validationError });
-			}
-
-			_context.Entry(model).State = EntityState.Modified;
-			await _context.SaveChangesAsync();
-
-			// Set NotMapped properties
-			model.SetNotMapped();
-
-			return Ok(model);
-		}
-		catch (DbUpdateConcurrencyException)
-		{
-			if (!await _context.Duties.AnyAsync(e => e.DutyId == id))
-			{
-				return NotFound(new { Error = "Duty not found." });
-			}
-			else
-			{
-				throw;
-			}
-		}
-		catch (Exception ex)
-		{
-			return StatusCode(500, new { Error = "An error occurred while updating the duty.", Details = ex.Message });
-		}
+		var result = await dutyService.UpdateAsync(id, request);
+		return result.IsSuccess ? result.Value : result.Error.ToActionResult();
 	}
 
 	[HttpDelete("{id}")]
 	public async Task<IActionResult> DeleteDuty(long id)
 	{
-		try
-		{
-			var duty = await _dutyService.GetDutyAsync(_context, id);
-			if (duty == null)
-			{
-				return NotFound(new { Error = "Duty not found." });
-			}
-
-			bool hasLogs = await _dutyService.CheckIfDutyHasLogsAsync(_context, id);
-			if (hasLogs)
-			{
-				return BadRequest(new { Error = "Cannot delete duty with existing logs." });
-			}
-
-			_context.Duties.Remove(duty);
-			await _context.SaveChangesAsync();
-
-			return NoContent();
-		}
-		catch (Exception ex)
-		{
-			return StatusCode(500, new { Error = "An error occurred while deleting the duty.", Details = ex.Message });
-		}
+		var error = await dutyService.DeleteAsync(id);
+		return error is null ? NoContent() : error.ToActionResult();
 	}
 }

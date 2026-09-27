@@ -43,12 +43,35 @@ dotnet run
 
 The API will start on `http://localhost:5071` (or check console output for the actual port).
 
+## Running the Tests
+
+```bash
+dotnet test
+```
+
+The tests don't touch SQL Server. Service tests run against an in-memory SQLite database built from the same EF model.
+
 ## Project Structure
 
 ```text
 ffxiv_api/
-├── Controllers/        # API controllers
-├── Data/               # Entity Framework Context Definitions
-├── Models/             # Data models
-├── Program.cs          # Application entry point
+├── Controllers/            # HTTP only: bind request DTOs, call a service, map the result to a status code
+├── Data/
+│   ├── AppDbContext.cs
+│   └── Configurations/     # EF mapping, one IEntityTypeConfiguration per table
+├── Models/
+│   ├── DTOs/               # Request/response shapes (the API contract)
+│   ├── Entity/             # Database rows (never bound from or returned to clients)
+│   └── Enums/              # Source of truth for ids + labels
+├── Services/               # All database access and business rules
+└── Program.cs
+ffxiv_api.Tests/            # xUnit tests
 ```
+
+### Conventions
+
+- **Services own the `AppDbContext`.** Controllers never query the database directly.
+- **Entities never cross the HTTP boundary.** Requests bind to `*Request` DTOs (only writable fields). Responses are built with `*Response.FromEntity(...)`.
+- **Expected failures** (validation, not found, conflicts) are returned from services as a `ServiceError` and become `400`/`404`/`409` with a `{ "error": "..." }` body.
+- **Unexpected failures** just throw. The global exception handler logs them and returns a ProblemDetails `500`.
+- **The schema is managed outside EF** (no migrations). If you change a table, update the matching class in `Data/Configurations/` to mirror it.

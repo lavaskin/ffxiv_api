@@ -1,189 +1,55 @@
-using Microsoft.AspNetCore.Mvc;
-using ffxiv_api.Data;
-using Microsoft.EntityFrameworkCore;
-using ffxiv_api.Models.Entity;
+using ffxiv_api.Models.DTOs;
 using ffxiv_api.Services;
+using Microsoft.AspNetCore.Mvc;
 
 namespace ffxiv_api.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
-public class MentorRouletteController : ControllerBase
+public class MentorRouletteController(MentorRouletteService mentorRouletteService) : ControllerBase
 {
-    private readonly AppDbContext _context;
-	private readonly MentorRouletteService _mentorRouletteService;
-
-    public MentorRouletteController(
-		AppDbContext context,
-		MentorRouletteService mentorRouletteService
-	)
-    {
-        _context = context;
-		_mentorRouletteService = mentorRouletteService;
-    }
-
 	/// <summary>
-	/// Fetches all Mentor Roulette Logs
+	/// All logs, newest run first
 	/// </summary>
-	/// <returns>A list of all the mentor roulette logs</returns>
 	[HttpGet]
-	public async Task<IActionResult> GetMentorRouletteLogs()
+	public async Task<List<MentorRouletteLogResponse>> GetMentorRouletteLogs()
 	{
-		try
-		{
-			var logs = await _context.MentorRouletteLogs
-				.Include(log => log.DutyModel)
-				.OrderByDescending(log => log.SortOrder)
-				.ToListAsync();
-			foreach (var log in logs)
-			{
-				log.SetNotMapped();
-			}
-
-			return Ok(logs);
-		}
-		catch (Exception ex)
-		{
-			return StatusCode(500, new { Error = "An error occurred while retrieving mentor roulette logs.", Details = ex.Message });
-		}
+		return await mentorRouletteService.GetAllAsync();
 	}
 
-    [HttpGet("{id}")]
-	public async Task<IActionResult> GetMentorRouletteLog(long id)
+	[HttpGet("{id}")]
+	public async Task<ActionResult<MentorRouletteLogResponse>> GetMentorRouletteLog(long id)
 	{
-		try
-		{
-			var log = await _context.MentorRouletteLogs
-				.Include(log => log.DutyModel)
-				.FirstOrDefaultAsync(l => l.MentorRouletteLogId == id);
-			if (log == null)
-			{
-				return NotFound(new { Error = "Mentor Roulette Log not found." });
-			}
-
-			log.SetNotMapped();
-			return Ok(log);
-		}
-		catch (Exception ex)
-		{
-			return StatusCode(500, new { Error = "An error occurred while retrieving the mentor roulette log.", Details = ex.Message });
-		}
+		var result = await mentorRouletteService.GetAsync(id);
+		return result.IsSuccess ? result.Value : result.Error.ToActionResult();
 	}
-	
+
 	[HttpPost]
-	public async Task<IActionResult> CreateNewLog([FromBody] MentorRouletteLogModel model)
+	public async Task<ActionResult<MentorRouletteLogResponse>> CreateNewLog(MentorRouletteLogRequest request)
 	{
-		try
-		{
-            string? validationError = model.Validate();
-            if (validationError != null)
-            {
-                return BadRequest(new { Error = validationError });
-            }
-
-			model.MentorRouletteLogId = 0; // Ensure the ID is zero for new entries
-			model.DatePlayed = DateTime.UtcNow;
-
-			int? nextSortOrder = await _mentorRouletteService.GetNextSortOrderAsync(_context);
-			if (nextSortOrder == null)
-			{
-				return StatusCode(500, new { Error = "An error occurred while determining the next sort order for the mentor roulette log." });
-			}
-			model.SortOrder = nextSortOrder.Value;
-
-            // Add the new log to the database
-            _context.MentorRouletteLogs.Add(model);
-            await _context.SaveChangesAsync();
-
-            // Set NotMapped properties
-            model.SetNotMapped();
-
-            // Return the created log with a 201 status
-            return CreatedAtAction(nameof(GetMentorRouletteLog), new { id = model.MentorRouletteLogId }, model);
-        }
-		catch (Exception ex)
-		{
-			return StatusCode(500, new { Error = "An error occurred while creating the mentor roulette log.", Details = ex.Message });
-		}
+		var result = await mentorRouletteService.CreateAsync(request);
+		return result.IsSuccess
+			? CreatedAtAction(nameof(GetMentorRouletteLog), new { id = result.Value.MentorRouletteLogId }, result.Value)
+			: result.Error.ToActionResult();
 	}
 
 	[HttpPut("{id}")]
-	public async Task<IActionResult> UpdateLog(long id, [FromBody] MentorRouletteLogModel model)
+	public async Task<ActionResult<MentorRouletteLogResponse>> UpdateLog(long id, MentorRouletteLogRequest request)
 	{
-		try
-		{
-			if (id != model.MentorRouletteLogId)
-			{
-				return BadRequest(new { Error = "An unknown error occurred" });
-			}
-
-			string? validationError = model.Validate();
-			if (validationError != null)
-			{
-				return BadRequest(new { Error = validationError });
-			}
-
-			// Clear related duty to avoid tracking issues
-			model.DutyModel = null;
-
-			_context.Entry(model).State = EntityState.Modified;
-			await _context.SaveChangesAsync();
-
-			// Set NotMapped properties
-			model.SetNotMapped();
-
-			return Ok(model);
-		}
-		catch (DbUpdateConcurrencyException)
-		{
-			if (!await _context.MentorRouletteLogs.AnyAsync(e => e.MentorRouletteLogId == id))
-			{
-				return NotFound(new { Error = "Mentor Roulette Log not found." });
-			}
-			else
-			{
-				throw;
-			}
-		}
-		catch (Exception ex)
-		{
-			return StatusCode(500, new { Error = "An error occurred while updating the mentor roulette log.", Details = ex.Message });
-		}
+		var result = await mentorRouletteService.UpdateAsync(id, request);
+		return result.IsSuccess ? result.Value : result.Error.ToActionResult();
 	}
 
 	[HttpDelete("{id}")]
 	public async Task<IActionResult> DeleteLog(long id)
 	{
-		try
-		{
-			var log = await _context.MentorRouletteLogs.FindAsync(id);
-			if (log == null)
-			{
-				return NotFound(new { Error = "Mentor Roulette Log not found." });
-			}
-
-			_context.MentorRouletteLogs.Remove(log);
-			await _context.SaveChangesAsync();
-
-			return NoContent();
-		}
-		catch (Exception ex)
-		{
-			return StatusCode(500, new { Error = "An error occurred while deleting the mentor roulette log.", Details = ex.Message });
-		}
+		var error = await mentorRouletteService.DeleteAsync(id);
+		return error is null ? NoContent() : error.ToActionResult();
 	}
 
 	[HttpGet("[action]")]
-	public async Task<IActionResult> GetStats()
+	public async Task<MentorRouletteStats> GetStats()
 	{
-		try
-		{
-			var stats = await _mentorRouletteService.GetStatsAsync(_context);
-			return Ok(stats);
-		}
-		catch (Exception ex)
-		{
-			return StatusCode(500, new { Error = "An error occurred while retrieving mentor roulette stats.", Details = ex.Message });
-		}
+		return await mentorRouletteService.GetStatsAsync();
 	}
 }

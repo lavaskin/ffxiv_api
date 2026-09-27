@@ -28,4 +28,22 @@ public static class ExpansionEnumExtensions
 			_ => expansion.ToString()
 		};
 	}
+
+	/// <summary>
+	/// The inclusive range of duty level requirements belonging to an expansion, or null if duties
+	/// can't belong to it (1.0 content no longer exists in the game).
+	/// </summary>
+	public static (int Min, int Max)? GetLevelRange(this ExpansionEnum expansion)
+	{
+		return expansion switch
+		{
+			ExpansionEnum.ARealmReborn   => (1, 50),
+			ExpansionEnum.Heavensward    => (51, 60),
+			ExpansionEnum.Stormblood     => (61, 70),
+			ExpansionEnum.Shadowbringers => (71, 80),
+			ExpansionEnum.Endwalker      => (81, 90),
+			ExpansionEnum.Dawntrail      => (91, 100),
+			_ => null
+		};
+	}
 }

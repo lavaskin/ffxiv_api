@@ -1,168 +1,152 @@
 using ffxiv_api.Data;
 using ffxiv_api.Models.DTOs;
-using ffxiv_api.Models.Enums;
+using ffxiv_api.Models.Entity;
 using Microsoft.EntityFrameworkCore;
 
 namespace ffxiv_api.Services;
 
-public class MentorRouletteService
+public class MentorRouletteService(
+	AppDbContext db,
+	TimeProvider timeProvider,
+	MentorRouletteStatsCache statsCache
+)
 {
-	public async Task<int?> GetNextSortOrderAsync(AppDbContext context)
-	{
-		try
-		{
-			var maxSortOrder = await context.MentorRouletteLogs.MaxAsync(log => (int?)log.SortOrder) ?? 0;
-			return maxSortOrder + 1;
-		}
-		catch (Exception ex)
-		{
-			Console.WriteLine($"Error getting next sort order: {ex.Message}");
-			return null;
-		}
-	}
+	private static readonly ServiceError LogNotFound = ServiceError.NotFound("Mentor Roulette Log not found.");
 
-	public async Task<MentorRouletteStats> GetStatsAsync(AppDbContext context)
+	/// <summary>
+	/// All logs, newest run first
+	/// </summary>
+	public async Task<List<MentorRouletteLogResponse>> GetAllAsync()
 	{
-		var logs = await context.MentorRouletteLogs
-			.Include(log => log.DutyModel)
+		var logs = await db.MentorRouletteLogs
+			.AsNoTracking()
+			.Include(log => log.Duty)
+			.OrderByDescending(log => log.SortOrder)
 			.ToListAsync();
 
-		var chartEligibleLogs = logs
-			.Where(log =>
-				log.DutyModel?.ExpansionId != null &&
-				log.DutyModel.DutyTypeId != null &&
-				log.DutyModel.DutyTypeId != (long)DutyTypeEnum.Guildhest)
-			.ToList();
+		return logs.Select(MentorRouletteLogResponse.FromEntity).ToList();
+	}
 
-		var playedJobChartEligibleLogs = logs
-			.Where(log => log.DutyModel?.DutyTypeId != null)
-			.ToList();
+	public async Task<ServiceResult<MentorRouletteLogResponse>> GetAsync(long logId)
+	{
+		var log = await db.MentorRouletteLogs
+			.AsNoTracking()
+			.Include(log => log.Duty)
+			.FirstOrDefaultAsync(log => log.MentorRouletteLogId == logId);
 
-		var completedRoulettes = logs.Count(log => log.Completed);
-		var extremeTrialLogs = logs
-			.Where(log => log.DutyModel?.DutyTypeId == (long)DutyTypeEnum.ExtremeTrial)
-			.ToList();
+		return log is null ? LogNotFound : MentorRouletteLogResponse.FromEntity(log);
+	}
 
-		var topSeenDuties = logs
-			.Where(log => log.DutyModel != null)
-			.GroupBy(log => log.DutyModel!.Name)
-			.OrderByDescending(group => group.Count())
-			.ThenBy(group => group.Key)
-			.Take(3)
-			.Select(group => new SeenDutyStat
-			{
-				DutyName = group.Key,
-				Count = group.Count(),
-			})
-			.ToList();
-
-		var topPlayedJobs = logs
-			.Where(log =>
-				log.PlayedJobId.HasValue &&
-				Enum.IsDefined(typeof(JobEnum), (int)log.PlayedJobId.Value))
-			.GroupBy(log => (JobEnum)log.PlayedJobId!.Value)
-			.OrderByDescending(group => group.Count())
-			.ThenBy(group => group.Key)
-			.Take(3)
-			.Select(group => new PlayedJobStat
-			{
-				JobLabel = group.Key.GetLabel(),
-				Count = group.Count(),
-			})
-			.ToList();
-
-		var trackedDutyTypes = Enum
-			.GetValues<DutyTypeEnum>()
-			.ToList();
-
-		var playedJobDutyTypeBreakdown = playedJobChartEligibleLogs
-			.Where(log =>
-				log.PlayedJobId.HasValue &&
-				Enum.IsDefined(typeof(JobEnum), (int)log.PlayedJobId.Value))
-			.GroupBy(log => (JobEnum)log.PlayedJobId!.Value)
-			.OrderByDescending(group => group.Count())
-			.ThenBy(group => group.Key)
-			.Select(group => new PlayedJobDutyBreakdownStat
-			{
-				JobLabel = group.Key.GetLabel(),
-				DutyTypes = trackedDutyTypes
-					.Select(dutyType => new DutyTypeBreakdownStat
-					{
-						DutyTypeLabel = dutyType.GetLabel(),
-						Count = group.Count(log => (DutyTypeEnum)log.DutyModel!.DutyTypeId!.Value == dutyType),
-					})
-					.Where(stat => stat.Count > 0)
-					.ToList(),
-			})
-			.ToList();
-
-		var trackedJobRoles = Enum
-			.GetValues<JobRoleEnum>()
-			.ToList();
-
-		// Guildhests are deliberately kept here, matching the played job duty type breakdown above.
-		// Must be computed before Guildhests are stripped from trackedDutyTypes below.
-		var dutyTypeRoleBreakdown = playedJobChartEligibleLogs
-			.Where(log =>
-				log.PlayedJobId.HasValue &&
-				Enum.IsDefined(typeof(JobEnum), (int)log.PlayedJobId.Value) &&
-				Enum.IsDefined(typeof(DutyTypeEnum), (int)log.DutyModel!.DutyTypeId!.Value))
-			.GroupBy(log => (DutyTypeEnum)log.DutyModel!.DutyTypeId!.Value)
-			.OrderByDescending(group => group.Count())
-			.ThenBy(group => group.Key)
-			.Select(group => new DutyTypeRoleBreakdownStat
-			{
-				DutyTypeLabel = group.Key.GetLabel(),
-				Count = group.Count(),
-				Roles = trackedJobRoles
-					.Select(jobRole => new JobRoleBreakdownStat
-					{
-						RoleLabel = jobRole.GetLabel(),
-						Count = group.Count(log => ((JobEnum)log.PlayedJobId!.Value).GetRole() == jobRole),
-					})
-					.Where(stat => stat.Count > 0)
-					.ToList(),
-			})
-			.ToList();
-
-		// We don't want to include Guildhests in the duty expansion breakdown, so we filter them out here.
-		// They pollute the data
-		trackedDutyTypes = trackedDutyTypes
-			.Where(dutyType => dutyType != DutyTypeEnum.Guildhest)
-			.ToList();
-
-		var dutyExpansionBreakdown = chartEligibleLogs
-			.GroupBy(log => (ExpansionEnum)log.DutyModel!.ExpansionId!.Value)
-			.OrderBy(group => group.Key)
-			.Select(group => new DutyExpansionBreakdownStat
-			{
-				ExpansionLabel = group.Key.GetLabel(),
-				DutyTypes = trackedDutyTypes
-					.Select(dutyType => new DutyTypeBreakdownStat
-					{
-						DutyTypeLabel = dutyType.GetLabel(),
-						Count = group.Count(log => (DutyTypeEnum)log.DutyModel!.DutyTypeId!.Value == dutyType),
-					})
-					.Where(stat => stat.Count > 0)
-					.ToList(),
-			})
-			.ToList();
-
-		return new MentorRouletteStats
+	public async Task<ServiceResult<MentorRouletteLogResponse>> CreateAsync(MentorRouletteLogRequest request)
+	{
+		var duty = await ValidateAsync(request);
+		if (!duty.IsSuccess)
 		{
-			TotalRuns = logs.Count,
-			CompletedRoulettes = completedRoulettes,
-			AchievementProgressPercent = Math.Clamp((int)Math.Round(completedRoulettes * 100.0 / 2000), 0, 100),
-			TopSeenDuties = topSeenDuties,
-			TopPlayedJobs = topPlayedJobs,
-			PlayedJobDutyTypeBreakdown = playedJobDutyTypeBreakdown,
-			DutyTypeRoleBreakdown = dutyTypeRoleBreakdown,
-			TotalFailedDuties = logs.Count(log => !log.Completed),
-			NumberExtremeTrials = extremeTrialLogs.Count,
-			ExtremeTrialClearPercent = extremeTrialLogs.Count == 0
-				? 0
-				: (int)Math.Round(extremeTrialLogs.Count(log => log.Completed) * 100.0 / extremeTrialLogs.Count),
-			DutyExpansionBreakdown = dutyExpansionBreakdown,
+			return duty.Error;
+		}
+
+		int maxSortOrder = await db.MentorRouletteLogs.MaxAsync(log => (int?)log.SortOrder) ?? 0;
+		var log = new MentorRouletteLog
+		{
+			SortOrder = maxSortOrder + 1,
+			DatePlayed = timeProvider.GetUtcNow().UtcDateTime,
 		};
+		Apply(request, duty.Value, log);
+
+		db.MentorRouletteLogs.Add(log);
+		await db.SaveChangesAsync();
+		statsCache.Invalidate();
+
+		return MentorRouletteLogResponse.FromEntity(log);
+	}
+
+	public async Task<ServiceResult<MentorRouletteLogResponse>> UpdateAsync(long logId, MentorRouletteLogRequest request)
+	{
+		var log = await db.MentorRouletteLogs.FindAsync(logId);
+		if (log is null)
+		{
+			return LogNotFound;
+		}
+
+		var duty = await ValidateAsync(request);
+		if (!duty.IsSuccess)
+		{
+			return duty.Error;
+		}
+
+		Apply(request, duty.Value, log);
+		await db.SaveChangesAsync();
+		statsCache.Invalidate();
+
+		return MentorRouletteLogResponse.FromEntity(log);
+	}
+
+	/// <returns>null on success, otherwise why the log couldn't be deleted</returns>
+	public async Task<ServiceError?> DeleteAsync(long logId)
+	{
+		var log = await db.MentorRouletteLogs.FindAsync(logId);
+		if (log is null)
+		{
+			return LogNotFound;
+		}
+
+		db.MentorRouletteLogs.Remove(log);
+		await db.SaveChangesAsync();
+		statsCache.Invalidate();
+
+		return null;
+	}
+
+	/// <summary>
+	/// Served from <see cref="MentorRouletteStatsCache"/>. Recalculated only after a write clears it.
+	/// </summary>
+	public Task<MentorRouletteStats> GetStatsAsync()
+	{
+		return statsCache.GetOrCreateAsync(CalculateStatsAsync);
+	}
+
+	private async Task<MentorRouletteStats> CalculateStatsAsync()
+	{
+		var runs = await db.MentorRouletteLogs
+			.AsNoTracking()
+			.Select(log => new RouletteRun(
+				log.Duty.Name,
+				log.Duty.DutyType,
+				log.Duty.Expansion,
+				log.PlayedJob,
+				log.Completed))
+			.ToListAsync();
+
+		return MentorRouletteStatsCalculator.Calculate(runs);
+	}
+
+	/// <summary>
+	/// On success, returns the (tracked) duty the log points at, so it can be attached without a second query.
+	/// </summary>
+	private async Task<ServiceResult<Duty>> ValidateAsync(MentorRouletteLogRequest request)
+	{
+		string? validationError = request.Validate();
+		if (validationError is not null)
+		{
+			return ServiceError.Invalid(validationError);
+		}
+
+		var duty = await db.Duties.FindAsync(request.DutyId);
+		return duty is null
+			? ServiceError.Invalid("The selected duty does not exist.")
+			: duty;
+	}
+
+	/// <summary>
+	/// Copies the writable fields only. SortOrder and DatePlayed are server-owned and never taken from the client.
+	/// </summary>
+	private static void Apply(MentorRouletteLogRequest request, Duty duty, MentorRouletteLog log)
+	{
+		log.Duty = duty;
+		log.DutyId = duty.DutyId;
+		log.PlayedJob = request.PlayedJob!.Value; // non-null once Validate() has passed
+		log.Completed = request.Completed;
+		log.Replacement = request.Replacement;
+		log.Notes = request.Notes ?? string.Empty;
 	}
 }
