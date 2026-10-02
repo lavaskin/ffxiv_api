@@ -107,6 +107,26 @@ public class WireContractTests
 	}
 
 	[Fact]
+	public void Paged_response_has_the_fields_the_client_grid_reads()
+	{
+		var page = new PagedResponse<DutyResponse>
+		{
+			Items = [DutyResponse.FromEntity(Sastasha)],
+			Page = 2,
+			PageSize = 50,
+			TotalCount = 51,
+		};
+
+		var json = JsonSerializer.SerializeToNode(page, Web)!.AsObject();
+
+		Assert.Equal("Sastasha", (string)json["items"]![0]!["name"]!);
+		Assert.Equal(2, (int)json["page"]!);
+		Assert.Equal(50, (int)json["pageSize"]!);
+		Assert.Equal(51, (int)json["totalCount"]!);
+		Assert.Equal(4, json.Count);
+	}
+
+	[Fact]
 	public void Error_body_uses_the_error_field_the_client_toast_reads()
 	{
 		var json = JsonSerializer.Serialize(new ErrorResponse("Duty not found."), Web);

@@ -1,6 +1,8 @@
+using System.Linq.Expressions;
 using ffxiv_api.Data;
 using ffxiv_api.Models.DTOs;
 using ffxiv_api.Models.Entity;
+using ffxiv_api.Models.Enums;
 using Microsoft.EntityFrameworkCore;
 
 namespace ffxiv_api.Services;
@@ -14,17 +16,47 @@ public class MentorRouletteService(
 	private static readonly ServiceError LogNotFound = ServiceError.NotFound("Mentor Roulette Log not found.");
 
 	/// <summary>
-	/// All logs, newest run first
+	/// Enum columns sort by their value, i.e. game order (jobs grouped by role), not by label.
 	/// </summary>
-	public async Task<List<MentorRouletteLogResponse>> GetAllAsync()
-	{
-		var logs = await db.MentorRouletteLogs
-			.AsNoTracking()
-			.Include(log => log.Duty)
-			.OrderByDescending(log => log.SortOrder)
-			.ToListAsync();
+	private static readonly GridDefinition<MentorRouletteLog> Grid = new GridDefinition<MentorRouletteLog>()
+		.SearchBy(MatchesSearch)
+		.SortableBy("sortOrder", log => log.SortOrder)
+		.SortableBy("playedJob", log => log.PlayedJob)
+		.SortableBy("dutyName", log => log.Duty.Name)
+		.SortableBy("dutyType", log => log.Duty.DutyType)
+		.SortableBy("completed", log => log.Completed)
+		.SortableBy("replacement", log => log.Replacement)
+		.SortableBy("notes", log => log.Notes)
+		.SortableBy("datePlayed", log => log.DatePlayed)
+		.DefaultSort("sortOrder", SortDirection.Desc)
+		.TiebreakBy(log => log.MentorRouletteLogId);
 
-		return logs.Select(MentorRouletteLogResponse.FromEntity).ToList();
+	/// <summary>
+	/// One page of the roulettes grid. Newest run first unless the request sorts by something else.
+	/// </summary>
+	public Task<ServiceResult<PagedResponse<MentorRouletteLogResponse>>> GetPageAsync(MentorRouletteLogGridRequest request)
+	{
+		var logs = db.MentorRouletteLogs
+			.AsNoTracking()
+			.Include(log => log.Duty);
+
+		return Grid.ToPageAsync(logs, request, MentorRouletteLogResponse.FromEntity);
+	}
+
+	/// <summary>
+	/// Case-insensitive "contains" on the played job, duty name, duty type and notes.
+	/// </summary>
+	private static Expression<Func<MentorRouletteLog, bool>> MatchesSearch(string term)
+	{
+		// Lowered explicitly so matching doesn't depend on the column collation
+		string lowerTerm = term.ToLowerInvariant();
+		var playedJobs = EnumLabelSearch.ValuesMatching<JobEnum>(term, j => j.GetLabel());
+		var dutyTypes = EnumLabelSearch.ValuesMatching<DutyTypeEnum>(term, t => t.GetLabel());
+
+		return log => playedJobs.Contains(log.PlayedJob)
+			|| log.Duty.Name.ToLower().Contains(lowerTerm)
+			|| (log.Duty.DutyType != null && dutyTypes.Contains(log.Duty.DutyType.Value))
+			|| log.Notes.ToLower().Contains(lowerTerm);
 	}
 
 	public async Task<ServiceResult<MentorRouletteLogResponse>> GetAsync(long logId)

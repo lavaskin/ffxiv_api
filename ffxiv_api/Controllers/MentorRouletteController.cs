@@ -9,12 +9,13 @@ namespace ffxiv_api.Controllers;
 public class MentorRouletteController(MentorRouletteService mentorRouletteService) : ControllerBase
 {
 	/// <summary>
-	/// All logs, newest run first
+	/// One page of the roulettes grid. See <see cref="GridRequest"/> for the query string.
 	/// </summary>
 	[HttpGet]
-	public async Task<List<MentorRouletteLogResponse>> GetMentorRouletteLogs()
+	public async Task<ActionResult<PagedResponse<MentorRouletteLogResponse>>> GetMentorRouletteLogs([FromQuery] MentorRouletteLogGridRequest request)
 	{
-		return await mentorRouletteService.GetAllAsync();
+		var result = await mentorRouletteService.GetPageAsync(request);
+		return result.IsSuccess ? result.Value : result.Error.ToActionResult();
 	}
 
 	[HttpGet("{id}")]

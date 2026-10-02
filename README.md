@@ -75,3 +75,7 @@ ffxiv_api.Tests/            # xUnit tests
 - **Expected failures** (validation, not found, conflicts) are returned from services as a `ServiceError` and become `400`/`404`/`409` with a `{ "error": "..." }` body.
 - **Unexpected failures** just throw. The global exception handler logs them and returns a ProblemDetails `500`.
 - **The schema is managed outside EF** (no migrations). If you change a table, update the matching class in `Data/Configurations/` to mirror it.
+- **Grids are paged, searched and sorted in the database.** List endpoints take a `*GridRequest` from the query string (`?page=1&pageSize=50&search=...&sortBy=name&sortDirection=desc`) and return a `PagedResponse<T>` (`items`, `page`, `pageSize`, `totalCount`). Each grid declares a `GridDefinition<TEntity>` in its service with its searchable fields, sort keys, default sort and a unique tiebreaker. To extend a grid:
+  - *Search another field:* add it to the service's `MatchesSearch` predicate. Enum labels only exist in C#, so match them with `EnumLabelSearch.ValuesMatching` and filter on the ids.
+  - *Sort another column:* add a `.SortableBy("key", e => e.Column)` and send that key from the client.
+  - *Add a typed filter* (e.g. `?expansion=6`): add a property to that grid's `*GridRequest` and apply it to the query in `GetPageAsync` before calling `ToPageAsync`.

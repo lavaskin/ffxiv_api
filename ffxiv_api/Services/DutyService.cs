@@ -1,6 +1,8 @@
+using System.Linq.Expressions;
 using ffxiv_api.Data;
 using ffxiv_api.Models.DTOs;
 using ffxiv_api.Models.Entity;
+using ffxiv_api.Models.Enums;
 using Microsoft.EntityFrameworkCore;
 
 namespace ffxiv_api.Services;
@@ -11,14 +13,41 @@ public class DutyService(AppDbContext db, MentorRouletteStatsCache statsCache)
 
 	private static readonly ServiceError DutyNotFound = ServiceError.NotFound("Duty not found.");
 
-	public async Task<List<DutyResponse>> GetAllAsync()
-	{
-		var duties = await db.Duties
-			.AsNoTracking()
-			.OrderBy(d => d.Name)
-			.ToListAsync();
+	/// <summary>
+	/// Enum columns sort by their value, i.e. game order (expansions oldest first), not by label.
+	/// </summary>
+	private static readonly GridDefinition<Duty> Grid = new GridDefinition<Duty>()
+		.SearchBy(MatchesSearch)
+		.SortableBy("dutyId", d => d.DutyId)
+		.SortableBy("name", d => d.Name)
+		.SortableBy("levelRequirement", d => d.LevelRequirement)
+		.SortableBy("expansion", d => d.Expansion)
+		.SortableBy("dutyType", d => d.DutyType)
+		.DefaultSort("name", SortDirection.Asc)
+		.TiebreakBy(d => d.DutyId);
 
-		return duties.Select(DutyResponse.FromEntity).ToList();
+	/// <summary>
+	/// One page of the duties grid. Alphabetical unless the request sorts by something else.
+	/// </summary>
+	public Task<ServiceResult<PagedResponse<DutyResponse>>> GetPageAsync(DutyGridRequest request)
+	{
+		return Grid.ToPageAsync(db.Duties.AsNoTracking(), request, DutyResponse.FromEntity);
+	}
+
+	/// <summary>
+	/// Case-insensitive "contains" on the name, expansion, duty type and level requirement.
+	/// </summary>
+	private static Expression<Func<Duty, bool>> MatchesSearch(string term)
+	{
+		// Lowered explicitly so matching doesn't depend on the column collation
+		string lowerTerm = term.ToLowerInvariant();
+		var expansions = EnumLabelSearch.ValuesMatching<ExpansionEnum>(term, e => e.GetLabel());
+		var dutyTypes = EnumLabelSearch.ValuesMatching<DutyTypeEnum>(term, t => t.GetLabel());
+
+		return d => d.Name.ToLower().Contains(lowerTerm)
+			|| (d.Expansion != null && expansions.Contains(d.Expansion.Value))
+			|| (d.DutyType != null && dutyTypes.Contains(d.DutyType.Value))
+			|| d.LevelRequirement.ToString().Contains(term);
 	}
 
 	public async Task<ServiceResult<DutyResponse>> GetAsync(long dutyId)

@@ -41,16 +41,100 @@ public sealed class DutyServiceTests : IDisposable
 		DatePlayed = DateTime.UtcNow,
 	};
 
+	private static Duty Duty(string name, DutyTypeEnum dutyType, ExpansionEnum expansion, long level) => new()
+	{
+		Name = name,
+		DutyType = dutyType,
+		Expansion = expansion,
+		LevelRequirement = level,
+	};
+
+	private async Task<PagedResponse<DutyResponse>> Page(DutyGridRequest request)
+	{
+		var result = await CreateService().GetPageAsync(request);
+		Assert.True(result.IsSuccess, result.Error?.Message);
+		return result.Value;
+	}
+
 	[Fact]
-	public async Task GetAll_returns_duties_alphabetically_with_labels()
+	public async Task Page_defaults_to_alphabetical_with_labels()
 	{
 		_db.Seed(Dungeon("Sastasha"), Dungeon("Halatali"), Dungeon("Copperbell Mines"));
 
-		var duties = await CreateService().GetAllAsync();
+		var page = await Page(new DutyGridRequest());
 
-		Assert.Equal(["Copperbell Mines", "Halatali", "Sastasha"], duties.Select(d => d.Name));
-		Assert.All(duties, d => Assert.Equal("Dungeon", d.DutyTypeLabel));
-		Assert.All(duties, d => Assert.Equal("2.0: A Realm Reborn", d.ExpansionLabel));
+		Assert.Equal(["Copperbell Mines", "Halatali", "Sastasha"], page.Items.Select(d => d.Name));
+		Assert.All(page.Items, d => Assert.Equal("Dungeon", d.DutyTypeLabel));
+		Assert.All(page.Items, d => Assert.Equal("2.0: A Realm Reborn", d.ExpansionLabel));
+		Assert.Equal(3, page.TotalCount);
+	}
+
+	/// <summary>
+	/// The same fields the duties grid used to filter on in the browser, including the labels it shows
+	/// </summary>
+	[Theory]
+	[InlineData("SASTA", new[] { "Sastasha" })]
+	[InlineData("heavensward", new[] { "The Minstrel's Ballad: Thordan's Reign", "The Vault" })]
+	[InlineData("3.0", new[] { "The Minstrel's Ballad: Thordan's Reign", "The Vault" })]
+	[InlineData("extreme trial", new[] { "The Minstrel's Ballad: Thordan's Reign" })]
+	[InlineData("61", new[] { "The Sirensong Sea" })]
+	[InlineData("no such duty", new string[0])]
+	public async Task Search_matches_name_expansion_duty_type_and_level_ignoring_case(string search, string[] expected)
+	{
+		_db.Seed(
+			Duty("Sastasha", DutyTypeEnum.Dungeon, ExpansionEnum.ARealmReborn, 15),
+			Duty("The Vault", DutyTypeEnum.Dungeon, ExpansionEnum.Heavensward, 57),
+			Duty("The Minstrel's Ballad: Thordan's Reign", DutyTypeEnum.ExtremeTrial, ExpansionEnum.Heavensward, 60),
+			Duty("The Sirensong Sea", DutyTypeEnum.Dungeon, ExpansionEnum.Stormblood, 61));
+
+		var page = await Page(new DutyGridRequest { Search = search });
+
+		Assert.Equal(expected, page.Items.Select(d => d.Name));
+		Assert.Equal(expected.Length, page.TotalCount);
+	}
+
+	[Fact]
+	public async Task Enum_columns_sort_in_game_order_not_by_label()
+	{
+		_db.Seed(
+			Duty("A Guildhest", DutyTypeEnum.Guildhest, ExpansionEnum.Dawntrail, 100),
+			Duty("A Trial", DutyTypeEnum.Trial, ExpansionEnum.Heavensward, 60),
+			Duty("A Dungeon", DutyTypeEnum.Dungeon, ExpansionEnum.Endwalker, 90));
+
+		var byType = await Page(new DutyGridRequest { SortBy = "dutyType" });
+		var byExpansion = await Page(new DutyGridRequest { SortBy = "expansion" });
+
+		// By label, duty types would sort Dungeon, Guildhest, Trial
+		Assert.Equal(["A Dungeon", "A Trial", "A Guildhest"], byType.Items.Select(d => d.Name));
+		Assert.Equal(["A Trial", "A Dungeon", "A Guildhest"], byExpansion.Items.Select(d => d.Name));
+	}
+
+	[Fact]
+	public async Task Sorts_by_level_descending()
+	{
+		_db.Seed(Dungeon("Sastasha", level: 15), Dungeon("Halatali", level: 20), Dungeon("Copperbell Mines", level: 17));
+
+		var page = await Page(new DutyGridRequest { SortBy = "levelRequirement", SortDirection = SortDirection.Desc });
+
+		Assert.Equal(["Halatali", "Copperbell Mines", "Sastasha"], page.Items.Select(d => d.Name));
+	}
+
+	/// <summary>
+	/// The keys the duties grid sends as <c>sortBy</c>
+	/// </summary>
+	[Theory]
+	[InlineData("dutyId")]
+	[InlineData("name")]
+	[InlineData("levelRequirement")]
+	[InlineData("expansion")]
+	[InlineData("dutyType")]
+	public async Task Accepts_every_sort_key_the_client_sends(string sortBy)
+	{
+		_db.Seed(Dungeon("Sastasha"));
+
+		var result = await CreateService().GetPageAsync(new DutyGridRequest { SortBy = sortBy, SortDirection = SortDirection.Desc });
+
+		Assert.True(result.IsSuccess, result.Error?.Message);
 	}
 
 	[Fact]

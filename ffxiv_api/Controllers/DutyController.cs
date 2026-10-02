@@ -8,10 +8,14 @@ namespace ffxiv_api.Controllers;
 [Route("api/[controller]")]
 public class DutyController(DutyService dutyService) : ControllerBase
 {
+	/// <summary>
+	/// One page of the duties grid. See <see cref="GridRequest"/> for the query string.
+	/// </summary>
 	[HttpGet]
-	public async Task<List<DutyResponse>> GetDuties()
+	public async Task<ActionResult<PagedResponse<DutyResponse>>> GetDuties([FromQuery] DutyGridRequest request)
 	{
-		return await dutyService.GetAllAsync();
+		var result = await dutyService.GetPageAsync(request);
+		return result.IsSuccess ? result.Value : result.Error.ToActionResult();
 	}
 
 	[HttpGet("{id}")]

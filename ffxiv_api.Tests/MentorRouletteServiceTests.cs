@@ -40,26 +40,103 @@ public sealed class MentorRouletteServiceTests : IDisposable
 		LevelRequirement = 50,
 	};
 
-	private MentorRouletteLog Log(int sortOrder, Duty? duty = null, JobEnum job = JobEnum.Paladin, bool completed = true) => new()
+	private MentorRouletteLog Log(int sortOrder, Duty? duty = null, JobEnum job = JobEnum.Paladin, bool completed = true, string notes = "") => new()
 	{
 		DutyId = (duty ?? _sastasha).DutyId,
 		SortOrder = sortOrder,
 		PlayedJob = job,
 		Completed = completed,
+		Notes = notes,
 		DatePlayed = Earlier,
 	};
 
+	private async Task<PagedResponse<MentorRouletteLogResponse>> Page(MentorRouletteLogGridRequest request)
+	{
+		var result = await CreateService().GetPageAsync(request);
+		Assert.True(result.IsSuccess, result.Error?.Message);
+		return result.Value;
+	}
+
 	[Fact]
-	public async Task GetAll_returns_logs_newest_first_with_their_duty()
+	public async Task Page_defaults_to_newest_run_first_with_their_duty()
 	{
 		_db.Seed(Log(1), Log(3, _ifrit), Log(2));
 
-		var logs = await CreateService().GetAllAsync();
+		var page = await Page(new MentorRouletteLogGridRequest());
 
-		Assert.Equal([3, 2, 1], logs.Select(l => l.SortOrder));
-		Assert.Equal("The Bowl of Embers (Extreme)", logs[0].Duty?.Name);
-		Assert.Equal("Extreme Trial", logs[0].Duty?.DutyTypeLabel);
-		Assert.Equal("Paladin", logs[0].PlayedJobLabel);
+		Assert.Equal([3, 2, 1], page.Items.Select(l => l.SortOrder));
+		Assert.Equal("The Bowl of Embers (Extreme)", page.Items[0].Duty?.Name);
+		Assert.Equal("Extreme Trial", page.Items[0].Duty?.DutyTypeLabel);
+		Assert.Equal("Paladin", page.Items[0].PlayedJobLabel);
+		Assert.Equal(3, page.TotalCount);
+	}
+
+	/// <summary>
+	/// The same fields the roulettes grid used to filter on in the browser, including the labels it shows
+	/// </summary>
+	[Theory]
+	[InlineData("white", new[] { 2 })]
+	[InlineData("SAGE", new[] { 3 })]
+	[InlineData("sasta", new[] { 3, 1 })]
+	[InlineData("extreme trial", new[] { 2 })]
+	[InlineData("dungeon", new[] { 3, 1 })]
+	[InlineData("Wiped", new[] { 3 })]
+	[InlineData("no such run", new int[0])]
+	public async Task Search_matches_job_duty_name_duty_type_and_notes_ignoring_case(string search, int[] expected)
+	{
+		_db.Seed(
+			Log(1, _sastasha, JobEnum.Paladin),
+			Log(2, _ifrit, JobEnum.WhiteMage),
+			Log(3, _sastasha, JobEnum.Sage, notes: "wiped twice on the boss"));
+
+		var page = await Page(new MentorRouletteLogGridRequest { Search = search });
+
+		Assert.Equal(expected, page.Items.Select(l => l.SortOrder));
+		Assert.Equal(expected.Length, page.TotalCount);
+	}
+
+	[Fact]
+	public async Task Sorting_by_duty_name_keeps_newest_first_within_a_duty()
+	{
+		_db.Seed(Log(1, _sastasha), Log(2, _ifrit), Log(3, _sastasha));
+
+		var page = await Page(new MentorRouletteLogGridRequest { SortBy = "dutyName" });
+
+		// "Sastasha" sorts before "The Bowl of Embers (Extreme)"
+		Assert.Equal([3, 1, 2], page.Items.Select(l => l.SortOrder));
+	}
+
+	[Fact]
+	public async Task Played_job_sorts_in_role_order_not_by_label()
+	{
+		_db.Seed(Log(1, job: JobEnum.Sage), Log(2, job: JobEnum.WhiteMage), Log(3, job: JobEnum.Paladin));
+
+		var page = await Page(new MentorRouletteLogGridRequest { SortBy = "playedJob" });
+
+		// By label this would be Paladin, Sage, White Mage
+		Assert.Equal(["Paladin", "White Mage", "Sage"], page.Items.Select(l => l.PlayedJobLabel));
+	}
+
+	/// <summary>
+	/// The keys the roulettes grid sends as <c>sortBy</c>
+	/// </summary>
+	[Theory]
+	[InlineData("sortOrder")]
+	[InlineData("playedJob")]
+	[InlineData("dutyName")]
+	[InlineData("dutyType")]
+	[InlineData("completed")]
+	[InlineData("replacement")]
+	[InlineData("notes")]
+	[InlineData("datePlayed")]
+	public async Task Accepts_every_sort_key_the_client_sends(string sortBy)
+	{
+		_db.Seed(Log(1), Log(2, _ifrit));
+
+		var result = await CreateService().GetPageAsync(new MentorRouletteLogGridRequest { SortBy = sortBy, SortDirection = SortDirection.Desc });
+
+		Assert.True(result.IsSuccess, result.Error?.Message);
+		Assert.Equal(2, result.Value.Items.Count);
 	}
 
 	[Fact]
