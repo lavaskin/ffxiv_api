@@ -80,4 +80,38 @@ public class RequestValidationTests
 
 		Assert.Equal(expectedError, request.Validate());
 	}
+
+	private static readonly DateTimeOffset March1 = new(2026, 3, 1, 5, 0, 0, TimeSpan.Zero);
+
+	[Fact]
+	public void A_roulette_grid_request_using_every_filter_passes()
+	{
+		var request = new MentorRouletteLogGridRequest
+		{
+			Expansions = [ExpansionEnum.Endwalker],
+			DutyTypes = [DutyTypeEnum.Dungeon],
+			SubRoles = [JobSubRoleEnum.Healer],
+			Jobs = [JobEnum.Sage],
+			Completed = true,
+			Replacement = false,
+			PlayedFrom = March1,
+			PlayedBefore = March1.AddDays(1),
+		};
+
+		Assert.Null(request.Validate());
+	}
+
+	public static TheoryData<MentorRouletteLogGridRequest, string> InvalidRouletteGridRequests => new()
+	{
+		{ new() { Page = 0 }, "Page must be 1 or greater." }, // the shared paging rules still run
+		{ new() { PlayedFrom = March1, PlayedBefore = March1 }, "The played-from date must be before the played-before date." },
+		{ new() { PlayedFrom = March1.AddDays(1), PlayedBefore = March1 }, "The played-from date must be before the played-before date." },
+	};
+
+	[Theory]
+	[MemberData(nameof(InvalidRouletteGridRequests))]
+	public void Invalid_roulette_grid_filters_are_rejected(MentorRouletteLogGridRequest request, string expectedError)
+	{
+		Assert.Equal(expectedError, request.Validate());
+	}
 }

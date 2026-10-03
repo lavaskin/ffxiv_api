@@ -3,6 +3,7 @@ using ffxiv_api.Models.Entity;
 using ffxiv_api.Models.Enums;
 using ffxiv_api.Services;
 using Microsoft.EntityFrameworkCore;
+using static ffxiv_api.Tests.TestData;
 
 namespace ffxiv_api.Tests;
 
@@ -30,14 +31,6 @@ public sealed class MentorRouletteServiceTests : IDisposable
 		DutyId = duty.DutyId,
 		PlayedJob = JobEnum.Paladin,
 		Completed = completed,
-	};
-
-	private static Duty Duty(string name, DutyTypeEnum dutyType) => new()
-	{
-		Name = name,
-		DutyType = dutyType,
-		Expansion = ExpansionEnum.ARealmReborn,
-		LevelRequirement = 50,
 	};
 
 	private MentorRouletteLog Log(int sortOrder, Duty? duty = null, JobEnum job = JobEnum.Paladin, bool completed = true, string notes = "") => new()

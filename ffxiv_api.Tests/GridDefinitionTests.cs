@@ -2,6 +2,7 @@ using ffxiv_api.Models.DTOs;
 using ffxiv_api.Models.Entity;
 using ffxiv_api.Models.Enums;
 using ffxiv_api.Services;
+using static ffxiv_api.Tests.TestData;
 
 namespace ffxiv_api.Tests;
 
@@ -21,14 +22,6 @@ public sealed class GridDefinitionTests : IDisposable
 	private readonly TestDatabase _db = new();
 
 	public void Dispose() => _db.Dispose();
-
-	private static Duty Duty(string name, long level = 50) => new()
-	{
-		Name = name,
-		DutyType = DutyTypeEnum.Dungeon,
-		Expansion = ExpansionEnum.ARealmReborn,
-		LevelRequirement = level,
-	};
 
 	private async Task<ServiceResult<PagedResponse<T>>> Query<T>(DutyGridRequest request, Func<Duty, T> toResult)
 	{

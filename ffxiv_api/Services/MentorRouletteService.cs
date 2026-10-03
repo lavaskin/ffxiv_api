@@ -36,11 +36,82 @@ public class MentorRouletteService(
 	/// </summary>
 	public Task<ServiceResult<PagedResponse<MentorRouletteLogResponse>>> GetPageAsync(MentorRouletteLogGridRequest request)
 	{
-		var logs = db.MentorRouletteLogs
+		IQueryable<MentorRouletteLog> logs = db.MentorRouletteLogs
 			.AsNoTracking()
 			.Include(log => log.Duty);
 
+		// Only builds the query: ToPageAsync validates the request before anything runs
+		logs = ApplyFilters(logs, request);
+
 		return Grid.ToPageAsync(logs, request, MentorRouletteLogResponse.FromEntity);
+	}
+
+	/// <summary>
+	/// The typed filters on the request, all combined with AND. Empty lists and nulls don't filter.
+	/// </summary>
+	private static IQueryable<MentorRouletteLog> ApplyFilters(IQueryable<MentorRouletteLog> logs, MentorRouletteLogGridRequest request)
+	{
+		if (request.Expansions is { Count: > 0 } expansions)
+		{
+			logs = logs.Where(log => log.Duty.Expansion != null && expansions.Contains(log.Duty.Expansion.Value));
+		}
+
+		if (request.DutyTypes is { Count: > 0 } dutyTypes)
+		{
+			logs = logs.Where(log => log.Duty.DutyType != null && dutyTypes.Contains(log.Duty.DutyType.Value));
+		}
+
+		if (PlayableJobs(request) is { } jobs)
+		{
+			logs = logs.Where(log => jobs.Contains(log.PlayedJob));
+		}
+
+		if (request.Completed is { } completed)
+		{
+			logs = logs.Where(log => log.Completed == completed);
+		}
+
+		if (request.Replacement is { } replacement)
+		{
+			logs = logs.Where(log => log.Replacement == replacement);
+		}
+
+		if (request.PlayedFrom is { } playedFrom)
+		{
+			var from = playedFrom.UtcDateTime;
+			logs = logs.Where(log => log.DatePlayed >= from);
+		}
+
+		if (request.PlayedBefore is { } playedBefore)
+		{
+			var before = playedBefore.UtcDateTime;
+			logs = logs.Where(log => log.DatePlayed < before);
+		}
+
+		return logs;
+	}
+
+	/// <summary>
+	/// The jobs allowed by both the sub-role and job filters, or null when neither is set.
+	/// Sub-roles only exist in C#, so they're resolved to job ids here and filtered on those.
+	/// </summary>
+	private static List<JobEnum>? PlayableJobs(MentorRouletteLogGridRequest request)
+	{
+		var subRoles = request.SubRoles ?? [];
+		var selectedJobs = request.Jobs ?? [];
+
+		if (subRoles.Count == 0 && selectedJobs.Count == 0)
+		{
+			return null;
+		}
+
+		IEnumerable<JobEnum> jobs = selectedJobs.Count > 0 ? selectedJobs : Enum.GetValues<JobEnum>();
+		if (subRoles.Count > 0)
+		{
+			jobs = jobs.Where(job => job.GetSubRole() is { } subRole && subRoles.Contains(subRole));
+		}
+
+		return jobs.Distinct().ToList();
 	}
 
 	/// <summary>

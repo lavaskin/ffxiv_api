@@ -3,6 +3,7 @@ using ffxiv_api.Models.Entity;
 using ffxiv_api.Models.Enums;
 using ffxiv_api.Services;
 using Microsoft.EntityFrameworkCore;
+using static ffxiv_api.Tests.TestData;
 
 namespace ffxiv_api.Tests;
 
@@ -17,13 +18,7 @@ public sealed class DutyServiceTests : IDisposable
 
 	private MentorRouletteService CreateMentorRouletteService() => new(_db.CreateContext(), TimeProvider.System, _statsCache);
 
-	private static Duty Dungeon(string name, long level = 15) => new()
-	{
-		Name = name,
-		DutyType = DutyTypeEnum.Dungeon,
-		Expansion = ExpansionEnum.ARealmReborn,
-		LevelRequirement = level,
-	};
+	private static Duty Dungeon(string name, long level = 15) => Duty(name, level: level);
 
 	private static DutyRequest Request(string name, long level = 15) => new()
 	{
@@ -39,14 +34,6 @@ public sealed class DutyServiceTests : IDisposable
 		PlayedJob = JobEnum.Paladin,
 		SortOrder = 1,
 		DatePlayed = DateTime.UtcNow,
-	};
-
-	private static Duty Duty(string name, DutyTypeEnum dutyType, ExpansionEnum expansion, long level) => new()
-	{
-		Name = name,
-		DutyType = dutyType,
-		Expansion = expansion,
-		LevelRequirement = level,
 	};
 
 	private async Task<PagedResponse<DutyResponse>> Page(DutyGridRequest request)

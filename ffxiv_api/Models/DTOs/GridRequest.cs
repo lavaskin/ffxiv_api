@@ -5,7 +5,7 @@ namespace ffxiv_api.Models.DTOs;
 /// <c>?page=2&amp;pageSize=50&amp;search=aurum&amp;sortBy=name&amp;sortDirection=desc</c>.
 /// </summary>
 /// <remarks>
-/// Each grid has its own sealed subclass, so typed filters (e.g. <c>?expansion=6</c>) can be added
+/// Each grid has its own sealed subclass, so typed filters (e.g. <c>?expansions=5&amp;expansions=6</c>) can be added
 /// to just that grid. The fields the search matches and the valid <see cref="SortBy"/> keys are
 /// defined by the grid's <c>GridDefinition</c> in its service.
 /// </remarks>
@@ -40,8 +40,9 @@ public abstract record GridRequest
 
 	/// <summary>
 	/// Rules that don't depend on the grid. Returns the first problem found, or null if valid.
+	/// A grid with typed filters overrides this to check them too.
 	/// </summary>
-	public string? Validate()
+	public virtual string? Validate()
 	{
 		if (Page < 1)
 		{
